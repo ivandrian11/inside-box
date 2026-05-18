@@ -1,0 +1,164 @@
+@import 'tailwindcss';
+@config "../tailwind.config.js";
+
+/* Noise Texture */
+.bg-noise {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* Hide Scrollbar but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(106, 123, 168, 0.1);
+  box-shadow: 0 4px 30px rgba(106, 123, 168, 0.05);
+}
+
+.glass-panel {
+  background: rgba(248, 249, 253, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(106, 123, 168, 0.1);
+}
+
+/* Stroke Text Effect */
+.stroke-text {
+  -webkit-text-stroke: 1px #6a7ba8;
+}
+
+/* Animation for scan line */
+@keyframes scan {
+  0%,
+  100% {
+    top: 0;
+  }
+  50% {
+    top: calc(100% - 8px);
+  }
+}
+
+.animate-scan {
+  animation: scan 2s ease-in-out infinite;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* 3D Transform Utilities */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Float animation */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Pulse slow animation */
+.animate-pulse-slow {
+  animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Spin slow animation */
+.animate-spin-slow {
+  animation: spin 12s linear infinite;
+}
+
+/* Base elements */
+button,
+a {
+  cursor: pointer;
+}
+
+/* Modal UI overrides */
+body.hide-global-header .absolute.top-0.left-0.z-40 {
+  display: none !important;
+}
+
+/* Shepherd JS Theme Overrides */
+.shepherd-has-title .shepherd-content .shepherd-header {
+  background: transparent;
+  padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+  border: none;
+}
+.shepherd-title {
+  font-family: "Playfair Display", serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-style: italic;
+  color: #1e293b; /* studio-text */
+}
+.shepherd-text {
+  padding: 0.5rem 1.5rem 1.5rem 1.5rem;
+  font-size: 0.875rem;
+  color: #64748b; /* studio-textLight */
+  line-height: 1.5;
+}
+.shepherd-footer {
+  padding: 0 1.5rem 1.5rem 1.5rem;
+}
+.shepherd-cancel-icon {
+  margin-top: 0.5rem;
+  margin-right: 0.5rem;
+  color: #94a3b8;
+  transition: color 0.2s;
+}
+.shepherd-cancel-icon:hover {
+  color: #f43f5e;
+}
+.shepherd-element {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
+  max-width: 320px;
+}

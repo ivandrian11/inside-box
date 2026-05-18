@@ -1,0 +1,4 @@
+ngrok config add-authtoken 38uhTGLaHPJdDzurIl12yQjkqvp_eU9trfGTMtEjs4VBJt7W
+
+
+ssh -R 3847:127.0.0.1:3847 rusa@165.101.18.158
