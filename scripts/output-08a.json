@@ -1,0 +1,61 @@
+{
+  "id": "08a",
+  "photoCount": 8,
+  "variant": "a",
+  "name": "New Template (8 Photos)",
+  "description": "Auto-generated configuration",
+  "previewUrl": "/templates/08a.png",
+  "frameUrl": "/templates/08a.png",
+  "outputWidth": 1200,
+  "outputHeight": 1800,
+  "slots": [
+    {
+      "x": 32,
+      "y": 46,
+      "width": 536,
+      "height": 376
+    },
+    {
+      "x": 628,
+      "y": 46,
+      "width": 536,
+      "height": 376
+    },
+    {
+      "x": 32,
+      "y": 456,
+      "width": 536,
+      "height": 376
+    },
+    {
+      "x": 628,
+      "y": 456,
+      "width": 536,
+      "height": 376
+    },
+    {
+      "x": 32,
+      "y": 871,
+      "width": 536,
+      "height": 377
+    },
+    {
+      "x": 628,
+      "y": 871,
+      "width": 536,
+      "height": 377
+    },
+    {
+      "x": 32,
+      "y": 1284,
+      "width": 536,
+      "height": 376
+    },
+    {
+      "x": 628,
+      "y": 1284,
+      "width": 536,
+      "height": 376
+    }
+  ]
+}

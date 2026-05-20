@@ -1,10 +1,7 @@
 import { Template } from '../types'
-import { RAMADHAN_TEMPLATES } from './templates/ramadhanTemplates'
 import { STANDARD_TEMPLATES } from './templates/standardTemplates'
-import { VALENTINE_TEMPLATES } from './templates/valentineTemplates'
 
 export const SESSION_DURATION_SECONDS = 600 // 10 minutes
-
 
 export const EFFECTS = [
   { id: 'none', label: 'Original', class: '' },
@@ -59,11 +56,7 @@ export const EFFECT_CLASSES = EFFECTS.reduce(
   {} as Record<string, string>,
 )
 
-export const TEMPLATES: Template[] = [
-  ...STANDARD_TEMPLATES,
-  ...RAMADHAN_TEMPLATES,
-  ...VALENTINE_TEMPLATES,
-]
+export const TEMPLATES: Template[] = [...STANDARD_TEMPLATES]
 
 // Helper function to get template by ID
 export const getTemplateById = (id: string): Template | undefined => {

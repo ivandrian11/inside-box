@@ -168,11 +168,42 @@ fn save_photo(ticket_code: String, photo_data: String, filename: String) -> Resu
         .decode(base64_data)
         .map_err(|e| format!("Failed to decode base64: {}", e))?;
 
-    // Save file
     let file_path = ticket_dir.join(&filename);
-    fs::write(&file_path, image_data).map_err(|e| format!("Failed to write file: {}", e))?;
 
-    println!("📸 Saved photo: {:?}", file_path);
+    // Opsi 2: Jika file sudah ada (berarti retake) dan merupakan foto jepretan,
+    // pindahkan file lama yang akan digantikan ke subfolder `history` terlebih dahulu
+    if filename.starts_with("photo_") && file_path.exists() {
+        let history_dir = ticket_dir.join("history");
+        if let Err(e) = fs::create_dir_all(&history_dir) {
+            println!("⚠️ Gagal membuat folder history: {}", e);
+        } else {
+            // Dapatkan timestamp unik dengan presisi milidetik
+            let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S_%3f").to_string();
+            
+            let file_stem = std::path::Path::new(&filename)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("photo");
+            let file_ext = std::path::Path::new(&filename)
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("jpg");
+            
+            let history_filename = format!("{}_{}.{}", file_stem, timestamp, file_ext);
+            let history_file_path = history_dir.join(&history_filename);
+            
+            // Pindahkan file lama ke subfolder history
+            if let Err(e) = fs::rename(&file_path, &history_file_path) {
+                println!("⚠️ Gagal memindahkan file lama ke history: {}", e);
+            } else {
+                println!("✨ Moved old replaced photo to history: {:?}", history_file_path);
+            }
+        }
+    }
+
+    // Tulis data foto baru (foto aktif) ke file_path utama
+    fs::write(&file_path, &image_data).map_err(|e| format!("Failed to write file: {}", e))?;
+    println!("📸 Saved active photo: {:?}", file_path);
 
     Ok(format!("/photos/{}/{}", ticket_code, filename))
 }

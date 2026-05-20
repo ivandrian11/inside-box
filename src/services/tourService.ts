@@ -173,20 +173,6 @@ export const startTourCamera = (onEnd?: () => void) => {
   })
 
   currentTour.addStep({
-    id: 'camera-flip',
-    title: 'Flip Image',
-    text: 'Nah, kalau barisan tombol ini bisa dipake buat puter-puter (flip) kamera kalau ngerasa posisinya kebalik kayak cermin. Atur senyaman kamu ya!',
-    attachTo: { element: '#tour-camera-row-2', on: 'right' },
-    buttons: [
-      {
-        text: 'Lanjut',
-        action: () => currentTour?.next(),
-        classes: btnClasses,
-      },
-    ],
-  })
-
-  currentTour.addStep({
     id: 'camera-timer',
     title: 'Durasi Sesi',
     text: 'Perhatiin sisa waktu kamu di sini yaa ⏱️. Tenang aja, waktunya cuma berjalan selama kamu ada di halaman Capture ini kok! Santai tapi pasti! 📸',
@@ -276,8 +262,6 @@ export const startTourReview = () => {
       },
     ],
   })
-
-
 
   currentTour.on('cancel', onCancelHandler)
   setTimeout(() => currentTour?.start(), 1000)

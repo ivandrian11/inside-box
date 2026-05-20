@@ -1,0 +1,49 @@
+{
+  "id": "06c",
+  "photoCount": 6,
+  "variant": "a",
+  "name": "New Template (6 Photos)",
+  "description": "Auto-generated configuration",
+  "previewUrl": "/templates/06c.png",
+  "frameUrl": "/templates/06c.png",
+  "outputWidth": 1200,
+  "outputHeight": 1800,
+  "slots": [
+    {
+      "x": 31,
+      "y": 117,
+      "width": 538,
+      "height": 437
+    },
+    {
+      "x": 631,
+      "y": 117,
+      "width": 538,
+      "height": 437
+    },
+    {
+      "x": 31,
+      "y": 601,
+      "width": 538,
+      "height": 436
+    },
+    {
+      "x": 631,
+      "y": 601,
+      "width": 538,
+      "height": 436
+    },
+    {
+      "x": 31,
+      "y": 1085,
+      "width": 538,
+      "height": 436
+    },
+    {
+      "x": 631,
+      "y": 1085,
+      "width": 538,
+      "height": 436
+    }
+  ]
+}
