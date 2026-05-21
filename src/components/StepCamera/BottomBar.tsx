@@ -36,7 +36,7 @@ export const BottomBar: React.FC<BottomBarProps> = ({
         id='tour-camera-slots'
         className={`p-4 rounded-3xl w-fit transition-all bg-white/40 backdrop-blur-md border border-studio-border shadow-xl ${
           totalSlots >= 8
-            ? 'grid grid-cols-4 gap-3 -translate-x-12 sm:-translate-x-16 md:-translate-x-24 lg:-translate-x-32'
+            ? 'grid grid-cols-4 gap-3'
             : totalSlots > 3
               ? 'grid grid-cols-3 gap-3'
               : 'flex gap-3'

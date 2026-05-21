@@ -147,6 +147,58 @@ async fn create_xendit_qr(ticket_code: String, amount: i32) -> Result<String, St
     Ok(qr_string)
 }
 
+fn url_encode(s: &str) -> String {
+    s.bytes()
+        .map(|b| match b {
+            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                (b as char).to_string()
+            }
+            _ => format!("%{:02X}", b),
+        })
+        .collect()
+}
+
+#[tauri::command]
+async fn gdrive_get_access_token(
+    client_id: String,
+    client_secret: String,
+    refresh_token: String,
+) -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let body = format!(
+        "client_id={}&client_secret={}&refresh_token={}&grant_type=refresh_token",
+        url_encode(&client_id),
+        url_encode(&client_secret),
+        url_encode(&refresh_token)
+    );
+
+    let res = client
+        .post("https://oauth2.googleapis.com/token")
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+
+    if !res.status().is_success() {
+        let status = res.status();
+        let err_text = res.text().await.unwrap_or_default();
+        return Err(format!("Google API error ({}): {}", status, err_text));
+    }
+
+    let json = res
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|e| format!("Failed to parse JSON: {}", e))?;
+
+    let access_token = json
+        .get("access_token")
+        .and_then(|t| t.as_str())
+        .ok_or_else(|| format!("No access_token in response: {}", json))?;
+
+    Ok(access_token.to_string())
+}
+
 // Save photo to local storage
 #[tauri::command]
 fn save_photo(ticket_code: String, photo_data: String, filename: String) -> Result<String, String> {
@@ -296,7 +348,7 @@ async fn print_ticket_result(ticket_code: String) -> Result<String, String> {
             r#"
             add-type -AssemblyName System.Drawing
             $doc = New-Object System.Drawing.Printing.PrintDocument
-            $doc.DocumentName = "Rua Rasa Photo Booth"
+            $doc.DocumentName = "Inside Studio"
             
             # Setup Event Handler untuk PrintPage
             $doc.add_PrintPage({{
@@ -569,7 +621,7 @@ fn generate_gallery_html(ticket_code: &str) -> String {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rua Rasa Booth - {ticket_code}</title>
+    <title>Inside Studio - {ticket_code}</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
@@ -659,7 +711,7 @@ fn generate_gallery_html(ticket_code: &str) -> String {
 <body>
     <div class="container">
         <header>
-            <h1>🎭 Rua Rasa Booth</h1>
+            <h1>🎭 Inside Studio</h1>
             <p style="margin: 10px 0; opacity: 0.7;">{today}</p>
             <div class="ticket-code">{ticket_code}</div>
         </header>
@@ -676,7 +728,7 @@ fn generate_gallery_html(ticket_code: &str) -> String {
         {empty_message}
 
         <footer>
-            <p>Terima kasih telah menggunakan Rua Rasa Booth!</p>
+            <p>Terima kasih telah menggunakan Inside Studio!</p>
             <p style="margin-top: 5px;">© Rua Rasa Lombok Immersive Edupark</p>
         </footer>
     </div>
@@ -1598,7 +1650,7 @@ fn start_http_server(app_handle: AppHandle) {
             let health = warp::path::end().and(warp::get()).map(|| {
                 warp::reply::json(&WebhookResponse {
                     success: true,
-                    message: "Rua Rasa Booth Server is running".to_string(),
+                    message: "Inside Studio Server is running".to_string(),
                     state: None,
                 })
             });
@@ -2058,6 +2110,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             save_photo,
+            gdrive_get_access_token,
             get_gallery_url,
             delete_photos_by_date,
             cleanup_old_photos_cmd,

@@ -77,11 +77,20 @@ const BoothContent: React.FC = () => {
         console.log('✅ Synced Xendit Secret Key from ENV')
       }
 
-      // Sync Tunnel URL if present
-      const tunnelUrl = import.meta.env.VITE_TUNNEL_URL
-      if (tunnelUrl) {
-        await setSetting(SettingKeys.TUNNEL_URL, tunnelUrl)
+      // Sync Tunnel URL if present in ENV
+      const envTunnelUrl = import.meta.env.VITE_TUNNEL_URL
+      if (envTunnelUrl) {
+        await setSetting(SettingKeys.TUNNEL_URL, envTunnelUrl)
         console.log('✅ Synced Tunnel URL from ENV')
+      }
+
+      // Load active Tunnel URL from DB and set it in memory
+      const { getTunnelUrlSetting } = await import('./services/databaseService')
+      const { setTunnelUrl } = await import('./services/tunnelService')
+      const activeTunnelUrl = await getTunnelUrlSetting()
+      if (activeTunnelUrl) {
+        setTunnelUrl(activeTunnelUrl)
+        console.log('🌐 Initialized Tunnel URL from DB:', activeTunnelUrl)
       }
     }
 

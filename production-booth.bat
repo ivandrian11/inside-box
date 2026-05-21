@@ -1,29 +1,28 @@
 @echo off
-title Rua Rasa Booth Production Launcher
+title Inside Studio Launcher
 color 0b
 
 echo ========================================================
-echo        RUA RASA BOOTH - PRODUCTION LAUNCHER
+echo        INSIDE STUDIO - LAUNCHER
 echo ========================================================
 echo.
 
-echo [1/3] Menjalankan Aplikasi Build...
-start "Rua Rasa App" "src-tauri\target\release\ruarasa-booth.exe"
+echo [1/2] Menjalankan Aplikasi (Development Mode)...
+start "Inside Studio App" cmd /k "pnpm tauri dev"
 
 echo.
-echo [2/3] Menunggu aplikasi siap (5 detik)...
-timeout /t 5
+echo Menunggu aplikasi siap (3 detik)...
+timeout /t 3
 
 echo.
-echo [3/3] Menyalakan SSH Tunnel...
-echo       Jendela baru akan terbuka.
-echo       Silakan masukkan password VPS 'rusa' di jendela tersebut jika diminta.
-start "Rua Rasa Tunnel" cmd /c "ssh -o ServerAliveInterval=60 -N -R 3847:127.0.0.1:3847 rusa@165.101.18.158 && pause"
+echo [2/2] Menyalakan Cloudflare Tunnel...
+echo       Jendela baru akan terbuka dengan URL publik Anda.
+start "Inside Studio Tunnel" cmd /k "cloudflared tunnel --url http://localhost:3847"
 
 echo.
 echo ========================================================
 echo  SEMUA BERJALAN.
-echo  - Jendela 1: Aplikasi Tauri
-echo  - Jendela 2: SSH Tunnel (Jangan ditutup)
+echo  - Jendela 1: Aplikasi Photo Booth (pnpm tauri dev)
+echo  - Jendela 2: Cloudflare Tunnel (Jangan ditutup)
 echo ========================================================
 pause

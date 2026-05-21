@@ -14,6 +14,7 @@ export interface SessionSaveResult {
   photoUrls: string[]
   templateUrl?: string
   isPublic: boolean // true if accessible via tunnel
+  driveUrl?: string // Google Drive folder link
 }
 
 /**

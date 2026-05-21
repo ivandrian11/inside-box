@@ -1,7 +1,6 @@
 import React from 'react'
 import {
   Printer,
-  Upload,
   QrCode,
   Loader2,
   ChevronRight,
@@ -9,6 +8,7 @@ import {
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { SessionSaveResult } from '../../services/localStorageService'
+import { UploadProgressInfo } from '../../services/googleDriveService'
 
 interface ResultViewProps {
   compositeResult: string | null
@@ -22,6 +22,7 @@ interface ResultViewProps {
   onDownload: () => void
   onNewSession: () => void
   onSecretUnlock: () => void
+  uploadProgressInfo: UploadProgressInfo | null
   debugModeInfo?: {
     isDebugMode: boolean
     clickCount: number
@@ -39,6 +40,7 @@ export const ResultView: React.FC<ResultViewProps> = ({
   onPrint,
   onNewSession,
   onSecretUnlock,
+  uploadProgressInfo,
   debugModeInfo,
 }) => {
   const [showNewSessionConfirm, setShowNewSessionConfirm] =
@@ -107,15 +109,42 @@ export const ResultView: React.FC<ResultViewProps> = ({
             id='tour-done-qr'
             className='flex flex-col items-center bg-white border border-studio-border rounded-3xl p-6 shadow-xl relative overflow-hidden min-w-[280px]'
           >
-            {isSaving ? (
-              <div className='flex flex-col items-center p-6'>
-                <div className='p-3 bg-studio-bg rounded-xl mb-3'>
-                   <Upload
-                    className='text-studio-primary animate-pulse'
-                    size={32}
+            {isSaving || (uploadProgressInfo && uploadProgressInfo.status !== 'success' && uploadProgressInfo.status !== 'error') ? (
+              <div className='flex flex-col items-center p-6 w-full min-h-[220px] justify-center'>
+                <div className='p-4 bg-studio-bg rounded-2xl mb-4 relative flex items-center justify-center'>
+                  <Loader2
+                    className='text-studio-primary animate-spin'
+                    size={36}
                   />
+                  {uploadProgressInfo && uploadProgressInfo.status === 'uploading' && (
+                    <span className='absolute text-[0.65rem] font-display font-black text-studio-primary mt-0.5'>
+                      {uploadProgressInfo.overallPercent}%
+                    </span>
+                  )}
                 </div>
-                <p className='text-studio-text font-black uppercase tracking-widest text-xs italic'>Menyimpan...</p>
+                
+                <p className='text-studio-text font-display font-black uppercase tracking-widest text-xs italic mb-2 text-center'>
+                  {uploadProgressInfo ? (
+                    uploadProgressInfo.status === 'authenticating' ? 'Menghubungkan Drive...' :
+                    uploadProgressInfo.status === 'creating_folder' ? 'Membuat Folder...' :
+                    'Mengunggah Foto...'
+                  ) : 'Menyimpan...'}
+                </p>
+
+                {uploadProgressInfo && (
+                  <div className='w-full max-w-[200px] mt-1'>
+                    <div className='w-full bg-studio-bg rounded-full h-2 overflow-hidden border border-studio-border/50'>
+                      <div
+                        className='bg-studio-primary h-full rounded-full transition-all duration-300 ease-out'
+                        style={{ width: `${uploadProgressInfo.overallPercent}%` }}
+                      />
+                    </div>
+                    
+                    <p className='text-[0.6rem] text-studio-textLight font-medium text-center mt-2 tracking-wider leading-relaxed opacity-75'>
+                      {uploadProgressInfo.message}
+                    </p>
+                  </div>
+                )}
               </div>
             ) : saveResult ? (
               <>
@@ -130,7 +159,7 @@ export const ResultView: React.FC<ResultViewProps> = ({
 
                 <div className='bg-white p-2.5 rounded-2xl shadow-inner border border-studio-bg mb-3'>
                   <QRCodeSVG
-                    value={saveResult.galleryUrl}
+                    value={saveResult.driveUrl || saveResult.galleryUrl}
                     size={150}
                     level='M'
                     includeMargin={false}
@@ -141,6 +170,26 @@ export const ResultView: React.FC<ResultViewProps> = ({
                 <div className='bg-studio-bg/50 px-3 py-2 rounded-xl border border-studio-border text-center max-w-[200px] mb-2 font-display font-bold text-[0.6rem] text-studio-textLight uppercase tracking-widest italic'>
                     Scan QR to Download
                 </div>
+
+                {uploadProgressInfo?.status === 'error' && (
+                  <div className='mt-1 px-3 py-2 bg-amber-50 rounded-xl border border-amber-200 text-center max-w-[220px]'>
+                    <p className='text-[0.55rem] text-amber-700 font-bold uppercase tracking-wider mb-0.5'>
+                      ⚠️ Cloud Offline
+                    </p>
+                    <p className='text-[0.5rem] text-amber-600 font-medium leading-normal'>
+                      Hubungkan ke WiFi Booth untuk download foto secara lokal.
+                    </p>
+                  </div>
+                )}
+
+                {uploadProgressInfo?.status === 'success' && (
+                  <div className='mt-1 px-3 py-1 bg-green-50 rounded-xl border border-green-200 flex items-center justify-center gap-1 max-w-[200px]'>
+                    <CheckCircle2 size={10} className='text-green-600' />
+                    <span className='text-[0.55rem] text-green-700 font-bold uppercase tracking-widest'>
+                      Google Drive Ready
+                    </span>
+                  </div>
+                )}
                 
                 <div className='h-2' />
               </>

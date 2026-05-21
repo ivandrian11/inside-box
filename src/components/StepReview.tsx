@@ -9,6 +9,10 @@ import {
   SessionSaveResult,
 } from '../services/localStorageService'
 import {
+  uploadSessionToDrive,
+  UploadProgressInfo,
+} from '../services/googleDriveService'
+import {
   logSession,
   markSessionPrinted,
   getSessionDurationMinutes,
@@ -48,6 +52,10 @@ export const StepReview: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false)
   const [saveResult, setSaveResult] = useState<SessionSaveResult | null>(null)
   const [isPrinting, setIsPrinting] = useState(false)
+  const [uploadProgressInfo, setUploadProgressInfo] = useState<UploadProgressInfo | null>(null)
+  
+  // Track if saving has been initiated to prevent race conditions / duplicate runs
+  const saveInitiatedRef = useRef(false)
 
   // Toast notification state
   const [toast, setToast] = useState<{
@@ -204,16 +212,23 @@ export const StepReview: React.FC = () => {
 
   // Auto-save when entering RESULT step
   useEffect(() => {
+    if (step !== AppStep.RESULT) {
+      saveInitiatedRef.current = false
+      return
+    }
+
     if (
       step === AppStep.RESULT &&
       compositeResult &&
       !saveResult &&
       !isSaving &&
-      ticketCode
+      ticketCode &&
+      !saveInitiatedRef.current
     ) {
+      saveInitiatedRef.current = true
       handleSavePhotos()
     }
-  }, [step, compositeResult, ticketCode])
+  }, [step, compositeResult, ticketCode, saveResult, isSaving])
 
   // Log session to database when entering RESULT step
   useEffect(() => {
@@ -276,13 +291,41 @@ export const StepReview: React.FC = () => {
         .filter((p) => p !== null)
         .map((p) => p!.original)
 
-      const result = await saveSessionPhotos(
+      // Save locally first
+      const localResult = await saveSessionPhotos(
         ticketCode,
         originalPhotos,
         compositeResult,
       )
-      setSaveResult(result)
-      console.log('Save complete:', result)
+
+      // Upload to Google Drive in parallel
+      let driveUrl: string | undefined
+      try {
+        driveUrl = await uploadSessionToDrive(
+          ticketCode,
+          originalPhotos,
+          compositeResult,
+          (progress) => {
+            setUploadProgressInfo(progress)
+          }
+        )
+      } catch (uploadError) {
+        console.error('Google Drive upload failed:', uploadError)
+        setUploadProgressInfo(prev => prev ? {
+          ...prev,
+          status: 'error',
+          message: `Gagal mengunggah ke Drive: ${uploadError instanceof Error ? uploadError.message : String(uploadError)}`
+        } : null)
+      }
+
+      // Combine local and drive result
+      const finalResult: SessionSaveResult = {
+        ...localResult,
+        driveUrl,
+      }
+
+      setSaveResult(finalResult)
+      console.log('Save complete with Drive:', finalResult)
     } catch (error) {
       console.error('Save failed:', error)
       alert('Gagal menyimpan foto. Coba lagi.')
@@ -360,6 +403,7 @@ export const StepReview: React.FC = () => {
         onDownload={handleDownload}
         onNewSession={handleNewSession}
         onSecretUnlock={handleSecretUnlock}
+        uploadProgressInfo={uploadProgressInfo}
         debugModeInfo={{
           isDebugMode,
           clickCount: enableClickCount,
