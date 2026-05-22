@@ -12,7 +12,6 @@ import {
   LogOut,
   ChevronRight,
   CheckCircle2,
-  Globe,
 } from 'lucide-react'
 import {
   getSessionDurationMinutes,
@@ -90,8 +89,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     return localStorage.getItem('sessionTimerScope') || 'STEP_03_ONLY'
   })
 
-  // Tunnel URL Input
-  const [tunnelUrlInput, setTunnelUrlInput] = useState<string>('')
+
 
   // Load settings on mount (immediately when panel opens)
   useEffect(() => {
@@ -101,7 +99,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     loadSessionPrice()
     loadDebugMode()
     loadTimerScope()
-    loadTunnelUrl()
   }, [])
 
   const loadTimerScope = async () => {
@@ -162,21 +159,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     )
   }
 
-  const loadTunnelUrl = async () => {
-    const { getTunnelUrlSetting } = await import('../services/databaseService')
-    const saved = await getTunnelUrlSetting()
-    setTunnelUrlInput(saved || '')
-  }
 
-  const handleTunnelUrlChange = async (url: string) => {
-    const formattedUrl = url.trim()
-    setTunnelUrlInput(formattedUrl)
-    const { setTunnelUrlSetting } = await import('../services/databaseService')
-    await setTunnelUrlSetting(formattedUrl)
-    const { setTunnelUrl } = await import('../services/tunnelService')
-    setTunnelUrl(formattedUrl)
-    showMessage('success', 'Tunnel URL berhasil disimpan')
-  }
 
   const loadCameras = async () => {
     try {
@@ -765,34 +748,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
             </div>
 
-            {/* Tunnel URL Configuration - Full Width */}
-            <div className='col-span-2 bg-studio-bg/40 p-6 border border-studio-border rounded-3xl space-y-4 shadow-sm'>
-              <div className='flex items-center gap-3 text-studio-primary'>
-                <Globe size={20} strokeWidth={2.5} />
-                <span className='font-display font-black italic tracking-widest uppercase text-xs'>Akses Publik (Cloudflare Tunnel)</span>
-              </div>
-              <div className='space-y-3'>
-                <p className='text-studio-textLight text-xs leading-relaxed'>
-                  Masukkan URL Cloudflare Tunnel aktif Anda di bawah ini agar QR Code di halaman pembayaran/kamera/galeri mengarah ke server publik.
-                  Dapatkan URL ini dari jendela terminal <span className='font-mono bg-studio-bg px-1.5 py-0.5 rounded'>cloudflared</span>.
-                </p>
-                <div className='flex gap-3'>
-                  <input
-                    type='text'
-                    value={tunnelUrlInput}
-                    onChange={(e) => setTunnelUrlInput(e.target.value)}
-                    placeholder='https://xxx-xxx.trycloudflare.com'
-                    className='flex-1 bg-white px-4 py-3 border-2 border-studio-border rounded-xl font-mono text-studio-text text-sm focus:outline-none focus:border-studio-primary transition-all'
-                  />
-                  <button
-                    onClick={() => handleTunnelUrlChange(tunnelUrlInput)}
-                    className='bg-studio-primary hover:bg-studio-primary/95 text-white font-bold px-6 rounded-xl text-xs uppercase tracking-widest transition-all hover:scale-105 active:scale-95'
-                  >
-                    Simpan URL
-                  </button>
-                </div>
-              </div>
-            </div>
+
 
             {/* Database & Export Section - Full Width */}
             <div className='col-span-2 bg-studio-text/5 p-6 border-2 border-dashed border-studio-border rounded-3xl space-y-4'>

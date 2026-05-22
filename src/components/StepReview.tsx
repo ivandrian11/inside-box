@@ -3,7 +3,6 @@ import { invoke } from '@tauri-apps/api/core'
 import { useBooth } from '../hooks/usePhotoBooth'
 import { AppStep } from '../types'
 import { downloadImage } from '../services/templateService'
-import { syncRemoteStep } from '../services/tunnelService'
 import {
   saveSessionPhotos,
   SessionSaveResult,
@@ -95,29 +94,7 @@ export const StepReview: React.FC = () => {
     setIsDebugMode(debug)
   }, [])
 
-  // Sync step to backend for remote
-  useEffect(() => {
-    if (ticketCode) {
-      const doSync = () =>
-        syncRemoteStep(
-          ticketCode,
-          'review',
-          photos.length,
-          photos
-            .filter((p): p is any => p !== null && !!p.filename)
-            .map((p) => p.filename || ''),
-        )
 
-      doSync()
-      const t1 = setTimeout(doSync, 1000)
-      const t2 = setTimeout(doSync, 3000)
-
-      return () => {
-        clearTimeout(t1)
-        clearTimeout(t2)
-      }
-    }
-  }, [ticketCode, photos])
 
   // Trigger Tour when Review Step is active
   useEffect(() => {

@@ -77,13 +77,6 @@ export const QRISPayment: React.FC<QRISPaymentProps> = ({
           </p>
         </div>
       </div>
-
-      <button
-        onClick={() => setPaymentMethod(null)}
-        className='pb-1 border-transparent hover:border-studio-primary border-b text-studio-textLight hover:text-studio-primary text-sm transition-all italic'
-      >
-        Ganti Metode Pembayaran
-      </button>
     </div>
   )
 }

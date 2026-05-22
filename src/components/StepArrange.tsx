@@ -5,12 +5,7 @@ import {
   compositePhotosToTemplate,
   PhotoOffset,
 } from '../services/templateService'
-import { syncRemoteStep } from '../services/tunnelService'
-import { listen } from '@tauri-apps/api/event'
-
 import { FilterSidebar } from './StepArrange/FilterSidebar'
-import { SideMenu } from './StepArrange/SideMenu'
-import { RemoteQRModal } from './StepArrange/RemoteQRModal'
 import { BottomBar } from './StepArrange/BottomBar'
 import { ArrangeCanvas } from './StepArrange/ArrangeCanvas'
 import { useArrangeInteractions } from '../hooks/useArrangeInteractions'
@@ -36,7 +31,6 @@ export const StepArrange: React.FC = () => {
     selectEffect,
     setStep,
     setCompositeResult,
-    ticketCode,
     selectedSequence,
   } = useBooth()
 
@@ -50,7 +44,6 @@ export const StepArrange: React.FC = () => {
   )
 
   const [isGenerating, setIsGenerating] = useState(false)
-  const [showRemoteQR, setShowRemoteQR] = useState(false)
 
   // Pinch-to-zoom states
   const [photoScales, setPhotoScales] = useState<number[]>(() =>
@@ -96,32 +89,7 @@ export const StepArrange: React.FC = () => {
     return () => observer.disconnect()
   }, [])
 
-  // Sync step to backend for remote redirect
-  useEffect(() => {
-    if (ticketCode) {
-      const doSync = () =>
-        syncRemoteStep(
-          ticketCode,
-          'arrange',
-          photos.filter(Boolean).length,
-          photos
-            .filter((p): p is PhotoData => p !== null)
-            .map((p) => p.filename || ''),
-        )
 
-      // Sync immediately
-      doSync()
-
-      // Retry to ensure remote catches up (network/race condition mitigation)
-      const t1 = setTimeout(doSync, 1000)
-      const t2 = setTimeout(doSync, 3000)
-
-      return () => {
-        clearTimeout(t1)
-        clearTimeout(t2)
-      }
-    }
-  }, [ticketCode, photos])
 
   // Trigger Tour when Arrange Step is active
   useEffect(() => {
@@ -131,77 +99,7 @@ export const StepArrange: React.FC = () => {
     return () => clearTimeout(t_tour)
   }, [])
 
-  // Listen for remote offset/scale changes from phone
-  useEffect(() => {
-    let unlisten: (() => void) | undefined
 
-    const setupListener = async () => {
-      try {
-        unlisten = await listen<{
-          ticket_code: string
-          photo_index: number
-          x_ratio: number // -1.0 to 1.0 from remote
-          y_ratio: number // -1.0 to 1.0 from remote
-          scale?: number
-        }>('remote-arrange-offset', (event) => {
-          const { photo_index, x_ratio, y_ratio, scale } = event.payload
-          const dims = photoDims[photo_index]
-          const slot = selectedTemplate?.slots[photo_index]
-
-          if (dims && slot) {
-            setPhotoScales((prevScales) => {
-              const currentScale = scale ?? prevScales[photo_index] ?? 1
-
-              // Calculate max offset based on NEW scale
-              const currentWidth = dims.displayWidth * currentScale
-              const currentHeight = dims.displayHeight * currentScale
-
-              const maxOffsetX = Math.max(0, (currentWidth - slot.width) / 2)
-              const maxOffsetY = Math.max(0, (currentHeight - slot.height) / 2)
-
-              // Clamp ratio
-              const clampedXRatio = Math.max(-1, Math.min(1, x_ratio))
-              const clampedYRatio = Math.max(-1, Math.min(1, y_ratio))
-
-              const pixelX = clampedXRatio * maxOffsetX
-              const pixelY = clampedYRatio * maxOffsetY
-
-              setOffsets((prevOffsets) => {
-                const newOffsets = [...prevOffsets]
-                if (photo_index >= 0 && photo_index < newOffsets.length) {
-                  newOffsets[photo_index] = { x: pixelX, y: pixelY }
-                }
-                return newOffsets
-              })
-
-              // Update scale if provided
-              if (scale !== undefined) {
-                const newScales = [...prevScales]
-                if (photo_index >= 0 && photo_index < newScales.length) {
-                  newScales[photo_index] = Math.max(1.0, Math.min(3.0, scale))
-                }
-                return newScales
-              }
-
-              return prevScales
-            })
-          }
-
-          setActiveIndex(photo_index)
-        })
-      } catch (error) {
-        console.error('Failed to setup remote offset listener:', error)
-      }
-    }
-
-    setupListener()
-
-    return () => {
-      if (unlisten) {
-        unlisten()
-      }
-    }
-  }, [photoDims, selectedTemplate])
 
   const previewDimensions = useMemo(() => {
     if (
@@ -300,7 +198,6 @@ export const StepArrange: React.FC = () => {
 
   const {
     activeIndex,
-    setActiveIndex,
     isDragging,
     isPinching,
     handleDragStart,
@@ -460,17 +357,7 @@ export const StepArrange: React.FC = () => {
         selectEffect={selectEffect}
       />
 
-      <SideMenu
-        ticketCode={ticketCode}
-        showRemoteQR={showRemoteQR}
-        setShowRemoteQR={setShowRemoteQR}
-      />
 
-      <RemoteQRModal
-        showRemoteQR={showRemoteQR}
-        setShowRemoteQR={setShowRemoteQR}
-        ticketCode={ticketCode}
-      />
 
       <BottomBar
         handleGenerate={handleGenerate}

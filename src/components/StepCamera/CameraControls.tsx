@@ -1,5 +1,5 @@
 import React from 'react'
-import { Settings, X, QrCode } from 'lucide-react'
+import { Settings, X } from 'lucide-react'
 
 interface CameraControlsProps {
   showDeviceMenu: boolean
@@ -11,8 +11,6 @@ interface CameraControlsProps {
   toggleFlipH: () => void
   flipVertical: boolean
   toggleFlipV: () => void
-  showQR: boolean
-  setShowQR: (show: boolean) => void
   isPortrait: boolean
   togglePortrait: () => void
 }
@@ -23,8 +21,6 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
   videoDevices,
   activeCameraId,
   setActiveCameraId,
-  showQR,
-  setShowQR,
 }) => {
   return (
     <div
@@ -149,44 +145,7 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
           </button>
         </div> */}
 
-        {/* Row 3: Remote & Orientation */}
-        <div id='tour-camera-row-3' className='flex gap-3'>
-          <button
-            id='tour-camera-remote'
-            onClick={() => setShowQR(!showQR)}
-            title='Remote Capture via QR Code'
-            className={`flex flex-col items-center justify-center backdrop-blur-md w-16 h-16 rounded-xl transition-all shadow-lg ${
-              showQR
-                ? 'bg-sasak-gold text-sasak-dark'
-                : 'bg-white text-sasak-dark hover:bg-sasak-gold'
-            }`}
-          >
-            <QrCode size={24} />
-            <span className='mt-1 font-bold text-[10px]'>Remote</span>
-          </button>
 
-          {/* Orientation Toggle (Commented out per user request) */}
-          {/* <button
-            onClick={togglePortrait}
-            title='Toggle Orientation'
-            className={`flex flex-col items-center justify-center backdrop-blur-md w-16 h-16 rounded-xl transition-all shadow-lg ${
-              isPortrait
-                ? 'bg-sasak-gold text-sasak-dark'
-                : 'bg-white text-sasak-dark hover:bg-sasak-gold'
-            }`}
-          >
-            <div
-              className={`transition-transform duration-300 ${
-                isPortrait ? 'rotate-90' : ''
-              }`}
-            >
-              <Smartphone size={24} />
-            </div>
-            <span className='mt-1 font-bold text-[10px]'>
-              {isPortrait ? '9:16' : '16:9'}
-            </span>
-          </button> */}
-        </div>
       </div>
     </div>
   )

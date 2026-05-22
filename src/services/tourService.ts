@@ -70,20 +70,6 @@ export const startTourPayment = () => {
   })
 
   currentTour.addStep({
-    id: 'payment-remote',
-    title: 'Scan Remote',
-    text: 'Scan QR di sini lewat HP untuk memantau Remote Booth. Di web HP nanti ada 3 menu: Camera, Edit/Arrange, dan Print.',
-    attachTo: { element: '#tour-remote-qr', on: 'right' },
-    buttons: [
-      {
-        text: 'Lanjut',
-        action: () => currentTour?.next(),
-        classes: btnClasses,
-      },
-    ],
-  })
-
-  currentTour.addStep({
     id: 'payment-start',
     title: 'Mulai Sesi',
     text: 'Klik tombol Mulai Sesi untuk mulai masuk ke Pemilihan Templat.',
@@ -158,19 +144,7 @@ export const startTourCamera = (onEnd?: () => void) => {
     defaultStepOptions,
   })
 
-  currentTour.addStep({
-    id: 'camera-remote',
-    title: 'Jadikan Remote',
-    text: 'Tap tombol ini buat ngubah HP kamu jadi remote control! Tinggal scan QR-nya aja biar gampang jepret dari jauh. Oiya, kalau udah pernah scan sebelumnya, ngga perlu scan ulang ya!✨',
-    attachTo: { element: '#tour-camera-remote', on: 'right' },
-    buttons: [
-      {
-        text: 'Lanjut',
-        action: () => currentTour?.next(),
-        classes: btnClasses,
-      },
-    ],
-  })
+
 
   currentTour.addStep({
     id: 'camera-timer',
@@ -203,7 +177,7 @@ export const startTourCamera = (onEnd?: () => void) => {
   currentTour.addStep({
     id: 'camera-capture',
     title: 'Ambil Foto',
-    text: 'Tap tombol ini buat mulai hitung mundur (countdown) jepretan kamu 🤩! Atau kamu bisa pakai HP jadi remote dengan scan QR Code tadi, gampang banget kan? 📱✨',
+    text: 'Tap tombol ini buat mulai hitung mundur (countdown) jepretan kamu 🤩!',
     attachTo: { element: '#tour-camera-capture', on: 'top' },
     buttons: [
       {
@@ -286,20 +260,6 @@ export const startTourArrange = (onEnd?: () => void) => {
     title: 'Geser & Zoom',
     text: 'Bebas berekspresi! Kamu bisa geser (drag) atau pinch buat zoom foto biar posisinya makin pas dan estetik di dalam frame. 🔍👌',
     attachTo: { element: '#tour-arrange-drag', on: 'right' },
-    buttons: [
-      {
-        text: 'Lanjut',
-        action: () => currentTour?.next(),
-        classes: btnClasses,
-      },
-    ],
-  })
-
-  currentTour.addStep({
-    id: 'arrange-remote',
-    title: 'Gunakan Handphone',
-    text: 'Biar ngeditnya makin pewe, tap tombol ini terus scan QR-nya pake HP kamu! Kalau web di HP belum di-close dari scan yang tadi, tinggal ganti menunya aja ya, ngga perlu scan ulang. Geser atau nge-zoom foto dari HP tuuu jauh lebih mudah lho! 📲✨',
-    attachTo: { element: '#tour-arrange-remote', on: 'right' },
     buttons: [
       {
         text: 'Mengerti',

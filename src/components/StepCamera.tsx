@@ -1,12 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useBooth } from '../hooks/usePhotoBooth'
-import { listen } from '@tauri-apps/api/event'
-import { getPublicRemoteUrl, syncRemoteStep } from '../services/tunnelService'
 import { startTourCamera } from '../services/tourService'
 
 // Sub-components
 import { CameraControls } from './StepCamera/CameraControls'
-import { RemoteQRModal } from './StepCamera/RemoteQRModal'
 import { Viewfinder } from './StepCamera/Viewfinder'
 import { BottomBar } from './StepCamera/BottomBar'
 import { PhotoPreviewModal } from './StepCamera/PhotoPreviewModal'
@@ -18,7 +15,6 @@ export const StepCamera: React.FC = () => {
     savePhoto,
     selectedTemplate,
     setPhotoIndex,
-    ticketCode,
     timeLeft,
     setTimerPaused,
   } = useBooth()
@@ -54,13 +50,7 @@ export const StepCamera: React.FC = () => {
     }
   }, [])
 
-  // QR Code remote control - prefer tunnel URL, fallback to local
-  const [showQR, setShowQR] = useState(false)
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null)
-  const remoteUrl = ticketCode
-    ? getPublicRemoteUrl(ticketCode) ||
-      `http://${window.location.hostname}:3847/remote/${ticketCode}`
-    : ''
 
   // Camera flip options
   const [flipHorizontal, setFlipHorizontal] = useState<boolean>(() => {
@@ -91,24 +81,7 @@ export const StepCamera: React.FC = () => {
     localStorage.setItem('isPortrait', isPortrait.toString())
   }, [isPortrait])
 
-  // Sync state to backend (Mirroring state for Remote)
-  useEffect(() => {
-    if (!ticketCode) return
 
-    fetch(`http://127.0.0.1:3847/booth/sync`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ticket_code: ticketCode,
-        action: 'sync',
-        state: {
-          flip_h: flipHorizontal,
-          flip_v: flipVertical,
-          is_portrait: isPortrait,
-        },
-      }),
-    }).catch((err) => console.error('State sync error:', err))
-  }, [ticketCode, flipHorizontal, flipVertical, isPortrait])
 
   // Toggle flip horizontal (Using functional update to avoid stale closures)
   const toggleFlipH = useCallback(() => {
@@ -200,73 +173,7 @@ export const StepCamera: React.FC = () => {
     }
   }, [activeCameraId])
 
-  // Sync step to backend for remote
-  useEffect(() => {
-    if (ticketCode && selectedTemplate) {
-      syncRemoteStep(ticketCode, 'capture', selectedTemplate.photoCount)
-    }
-  }, [ticketCode, selectedTemplate])
 
-  // Listen for remote capture events from phone
-  useEffect(() => {
-    let unlisten: (() => void) | undefined
-
-    const setupListener = async () => {
-      try {
-        unlisten = await listen<{
-          ticket_code: string
-          action: string
-          state?: { flip_h: boolean; flip_v: boolean; is_portrait: boolean }
-        }>('remote-capture', (event) => {
-          console.log('📱 Remote command received:', event.payload)
-          const { action, state } = event.payload
-
-          // If state is provided (server is source of truth), sync absolutely
-          if (state) {
-            setFlipHorizontal(state.flip_h)
-            setFlipVertical(state.flip_v)
-            setIsPortrait(state.is_portrait)
-          } else {
-            // Fallback to local toggle if no state provided
-            switch (action) {
-              case 'flip_h':
-                toggleFlipH()
-                break
-              case 'flip_v':
-                toggleFlipV()
-                break
-              case 'toggle_portrait':
-                togglePortrait()
-                break
-            }
-          }
-
-          // Handle capture trigger independently of state sync
-          if (action === 'capture') {
-            if (countdown === null) {
-              // Play timer sound (same as local capture)
-              if (timerAudioRef.current) {
-                timerAudioRef.current.currentTime = 0
-                timerAudioRef.current.play().catch(() => {})
-              }
-              setCountdown(3)
-            }
-          }
-        })
-        console.log('📱 Remote listener ready')
-      } catch (error) {
-        console.error('Failed to setup remote listener:', error)
-      }
-    }
-
-    setupListener()
-
-    return () => {
-      if (unlisten) {
-        unlisten()
-      }
-    }
-  }, [countdown, toggleFlipH, toggleFlipV, togglePortrait])
 
   const capture = useCallback(() => {
     if (videoRef.current && canvasRef.current) {
@@ -419,7 +326,7 @@ export const StepCamera: React.FC = () => {
 
   return (
     <div className='relative flex flex-col justify-center items-center pt-14 pb-6 px-6 w-full h-full'>
-      {/* Sidebar Controls - Unified Container */}
+      {/* Camera Controls - Unified Container */}
       <CameraControls
         showDeviceMenu={showDeviceMenu}
         setShowDeviceMenu={setShowDeviceMenu}
@@ -430,17 +337,8 @@ export const StepCamera: React.FC = () => {
         toggleFlipH={toggleFlipH}
         flipVertical={flipVertical}
         toggleFlipV={toggleFlipV}
-        showQR={showQR}
-        setShowQR={setShowQR}
         isPortrait={isPortrait}
         togglePortrait={togglePortrait}
-      />
-
-      {/* QR Code Modal (Click outside to close) */}
-      <RemoteQRModal
-        showQR={showQR}
-        setShowQR={setShowQR}
-        remoteUrl={remoteUrl}
       />
 
       {/* Viewfinder Container */}

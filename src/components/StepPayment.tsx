@@ -4,16 +4,11 @@ import { AppStep } from '../types'
 import {
   Timer,
   AlertTriangle,
-  QrCode,
-  Smartphone,
-  X,
   ListOrdered,
 } from 'lucide-react'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { SESSION_DURATION_SECONDS } from '../constants'
-import { QRCodeSVG } from 'qrcode.react'
-import { getPublicRemoteUrl } from '../services/tunnelService'
 import { startTourPayment } from '../services/tourService'
 
 import { QRISPayment } from './StepPayment/QRISPayment'
@@ -65,20 +60,14 @@ export const StepPayment: React.FC = () => {
     return code
   })
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'QRIS' | null>(
-    null,
+    'QRIS',
   )
   const [status, setStatus] = useState<
     'WAITING' | 'PROCESSING' | 'SUCCESS' | 'INSTRUCTIONS'
   >('WAITING')
-  const [showQR, setShowQR] = useState(false)
   const [qrString, setQrString] = useState<string>('') // Store Xendit QR String
   const [isGeneratingQR, setIsGeneratingQR] = useState(false)
   const [qrError, setQrError] = useState<string | null>(null)
-
-  const remoteUrl = ticketCode
-    ? getPublicRemoteUrl(ticketCode) ||
-      `http://${window.location.hostname}:3847/remote/${ticketCode}`
-    : ''
 
   // Debug mode (read from localStorage on mount)
   const debugMode = localStorage.getItem('debugMode') === 'true'
@@ -158,7 +147,7 @@ export const StepPayment: React.FC = () => {
 
           const qr = await invoke<string>('create_xendit_qr', {
             ticketCode,
-            amount: 500,
+            amount: 1,
           })
 
           setQrString(qr)
@@ -186,15 +175,7 @@ export const StepPayment: React.FC = () => {
     return (
       <div className='z-50 fixed inset-0 flex justify-center items-center bg-studio-text/40 backdrop-blur-sm animate-fade-in'>
         <div className='relative bg-white shadow-2xl mx-4 p-8 border border-studio-border rounded-3xl w-full max-w-3xl'>
-          {/* Remote Button (Floating Top Left) */}
-          <button
-            id='tour-remote-qr'
-            onClick={() => setShowQR(true)}
-            className='top-8 left-8 absolute flex flex-col justify-center items-center bg-white shadow-lg shadow-studio-primary/20 hover:shadow-studio-primary/40 p-3 border border-studio-border rounded-2xl w-20 h-20 font-bold text-studio-text text-xs hover:scale-105 active:scale-95 transition-all'
-          >
-            <QrCode size={28} className='mb-1 text-studio-primary' />
-            Remote
-          </button>
+
 
           {/* Header */}
           <div className='mb-6 text-center'>
@@ -248,21 +229,7 @@ export const StepPayment: React.FC = () => {
                 </div>
               </div>
 
-              <div className='flex items-start gap-3 bg-studio-bg p-4 border border-studio-border/50 rounded-xl'>
-                <Smartphone
-                  className='mt-0.5 text-studio-primary shrink-0'
-                  size={20}
-                />
-                <div>
-                  <h4 className='mb-1 font-bold text-studio-text'>
-                    Remote Control
-                  </h4>
-                  <p className='text-studio-textLight text-sm'>
-                    Gunakan tombol Remote di pojok kiri atas untuk kontrol
-                    dengan HP
-                  </p>
-                </div>
-              </div>
+
             </div>
 
             {/* Right Column - Tips */}
@@ -309,48 +276,7 @@ export const StepPayment: React.FC = () => {
             Mulai Sesi ({formatTime(getSessionDurationSeconds())})
           </button>
 
-          {/* QR Code Modal Overlay */}
-          {showQR && (
-            <div
-              className='z-60 fixed inset-0 flex flex-col justify-center items-center bg-black/80 backdrop-blur-md p-6 animate-in duration-200 fade-in zoom-in-95'
-              onClick={() => setShowQR(false)}
-            >
-              {/* White Card */}
-              <div
-                className='relative flex flex-col items-center bg-white shadow-2xl p-8 rounded-4xl w-full max-w-sm text-center'
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Close Button (Inside Card) */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setShowQR(false)
-                  }}
-                  className='-top-4 -right-4 absolute bg-white hover:bg-gray-100 shadow-lg p-2 border border-gray-200 rounded-full text-black/50 hover:text-black transition-colors'
-                >
-                  <X size={24} />
-                </button>
 
-                <h3 className='mb-1 font-bold text-black text-2xl tracking-tight'>
-                  Scan untuk Remote
-                </h3>
-                <p className='mb-8 text-black/50 text-lg'>
-                  Capture dari HP Anda
-                </p>
-
-                <div className='mb-8 p-2'>
-                  <QRCodeSVG value={remoteUrl} size={200} level='M' />
-                </div>
-
-                <p className='max-w-50 text-[10px] text-black/30 text-center break-all'>
-                  {remoteUrl}
-                </p>
-                <p className='mt-2 max-w-50 font-bold text-[10px] text-red-500'>
-                  Klik 'Visit Site' saat pertama kali membuka link
-                </p>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     )

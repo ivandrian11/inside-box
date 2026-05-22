@@ -46,47 +46,4 @@ export const getPublicGalleryUrl = (ticketCode: string): string | null => {
   return `${tunnelUrl}/gallery/${ticketCode}`
 }
 
-/**
- * Get remote capture URL via tunnel
- */
-export const getPublicRemoteUrl = (ticketCode: string): string | null => {
-  if (!tunnelUrl) return null
-  return `${tunnelUrl}/remote/${ticketCode}`
-}
 
-/**
- * Sync session step to backend for remote redirect
- */
-export const syncRemoteStep = async (
-  ticketCode: string,
-  step: string,
-  photoCount: number,
-  sortedFilenames?: string[],
-): Promise<void> => {
-  try {
-    const baseUrl = tunnelUrl || `http://${window.location.hostname}:3847`
-    const body: any = {
-      ticket_code: ticketCode,
-      step,
-      photo_count: photoCount,
-    }
-
-    // Only add if defined to avoid breaking backend if it's strict
-    if (sortedFilenames) {
-      body.sorted_filenames = sortedFilenames
-    }
-
-    await fetch(`${baseUrl}/booth/step`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': '1', // Skip ngrok warning page
-        'User-Agent': 'BoothApp/1.0', // Custom user agent
-      },
-      body: JSON.stringify(body),
-    })
-    console.log(`📍 Synced step: ${step} for ticket: ${ticketCode}`)
-  } catch (error) {
-    console.error('Failed to sync step:', error)
-  }
-}
