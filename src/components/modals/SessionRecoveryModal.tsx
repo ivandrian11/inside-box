@@ -119,14 +119,17 @@ export const SessionRecoveryModal: React.FC<SessionRecoveryModalProps> = ({
         </div>
 
         <div className='gap-2 grid grid-cols-2 bg-black/20 p-4 rounded-xl max-h-[50vh] overflow-y-auto'>
-          {selectedSession.photos.map((photo, idx) => (
-            <img
-              key={idx}
-              src={`http://127.0.0.1:3847/photos/${selectedSession.ticket_code}/${photo}`}
-              alt={photo}
-              className='rounded-lg w-full h-32 object-cover'
-            />
-          ))}
+          {selectedSession.photos.map((photo, idx) => {
+            const port = import.meta.env.VITE_BACKEND_PORT || '3847'
+            return (
+              <img
+                key={idx}
+                src={`http://127.0.0.1:${port}/photos/${selectedSession.ticket_code}/${photo}`}
+                alt={photo}
+                className='rounded-lg w-full h-32 object-cover'
+              />
+            )
+          })}
         </div>
 
         <button

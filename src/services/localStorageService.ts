@@ -46,7 +46,8 @@ const getLocalGalleryUrl = async (ticketCode: string): Promise<string> => {
   try {
     return await invoke<string>('get_gallery_url', { ticketCode })
   } catch {
-    return `http://localhost:3847/gallery/${ticketCode}`
+    const port = import.meta.env.VITE_BACKEND_PORT || '3847'
+    return `http://localhost:${port}/gallery/${ticketCode}`
   }
 }
 

@@ -3,7 +3,7 @@ import { useBooth } from '../hooks/usePhotoBooth'
 import { startTourCamera } from '../services/tourService'
 
 // Sub-components
-import { CameraControls } from './StepCamera/CameraControls'
+// import { CameraControls } from './StepCamera/CameraControls'
 import { Viewfinder } from './StepCamera/Viewfinder'
 import { BottomBar } from './StepCamera/BottomBar'
 import { PhotoPreviewModal } from './StepCamera/PhotoPreviewModal'
@@ -25,32 +25,9 @@ export const StepCamera: React.FC = () => {
   const [countdown, setCountdown] = useState<number | null>(null)
 
   // Camera Selection State
-  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([])
-  const [showDeviceMenu, setShowDeviceMenu] = useState(false)
   const [activeCameraId, setActiveCameraId] = useState<string | null>(() => {
     return localStorage.getItem('selectedCameraId')
   })
-
-  // Enumerate Devices
-  useEffect(() => {
-    const getDevices = async () => {
-      try {
-        const devs = await navigator.mediaDevices.enumerateDevices()
-        setVideoDevices(devs.filter((d) => d.kind === 'videoinput'))
-      } catch (err) {
-        console.error('Error listing devices:', err)
-      }
-    }
-    getDevices()
-
-    // Listen for device changes (plug/unplug)
-    navigator.mediaDevices.addEventListener('devicechange', getDevices)
-    return () => {
-      navigator.mediaDevices.removeEventListener('devicechange', getDevices)
-    }
-  }, [])
-
-  const [previewPhoto, setPreviewPhoto] = useState<string | null>(null)
 
   // Camera flip options
   const [flipHorizontal, setFlipHorizontal] = useState<boolean>(() => {
@@ -65,37 +42,23 @@ export const StepCamera: React.FC = () => {
     return localStorage.getItem('isPortrait') === 'true'
   })
 
+  const [previewPhoto, setPreviewPhoto] = useState<string | null>(null)
+
   // Debug mode (read from localStorage)
   const debugMode = localStorage.getItem('debugMode') === 'true'
 
-  // Sync states to localStorage
+  // Listen to camera settings changes from Admin Panel
   useEffect(() => {
-    localStorage.setItem('flipHorizontal', flipHorizontal.toString())
-  }, [flipHorizontal])
-
-  useEffect(() => {
-    localStorage.setItem('flipVertical', flipVertical.toString())
-  }, [flipVertical])
-
-  useEffect(() => {
-    localStorage.setItem('isPortrait', isPortrait.toString())
-  }, [isPortrait])
-
-
-
-  // Toggle flip horizontal (Using functional update to avoid stale closures)
-  const toggleFlipH = useCallback(() => {
-    setFlipHorizontal((prev) => !prev)
-  }, [])
-
-  // Toggle flip vertical
-  const toggleFlipV = useCallback(() => {
-    setFlipVertical((prev) => !prev)
-  }, [])
-
-  // Toggle portrait orientation
-  const togglePortrait = useCallback(() => {
-    setIsPortrait((prev) => !prev)
+    const handleSettingsChange = () => {
+      setActiveCameraId(localStorage.getItem('selectedCameraId'))
+      setFlipHorizontal(localStorage.getItem('flipHorizontal') === 'true')
+      setFlipVertical(localStorage.getItem('flipVertical') === 'true')
+      setIsPortrait(localStorage.getItem('isPortrait') === 'true')
+    }
+    window.addEventListener('camera-settings-changed', handleSettingsChange)
+    return () => {
+      window.removeEventListener('camera-settings-changed', handleSettingsChange)
+    }
   }, [])
 
   // Initialize Camera
@@ -326,7 +289,8 @@ export const StepCamera: React.FC = () => {
 
   return (
     <div className='relative flex flex-col justify-center items-center pt-14 pb-6 px-6 w-full h-full'>
-      {/* Camera Controls - Unified Container */}
+      {/* Camera Controls - Hidden per user request (managed via Admin Panel instead) */}
+      {/* 
       <CameraControls
         showDeviceMenu={showDeviceMenu}
         setShowDeviceMenu={setShowDeviceMenu}
@@ -340,6 +304,7 @@ export const StepCamera: React.FC = () => {
         isPortrait={isPortrait}
         togglePortrait={togglePortrait}
       />
+      */}
 
       {/* Viewfinder Container */}
       <Viewfinder

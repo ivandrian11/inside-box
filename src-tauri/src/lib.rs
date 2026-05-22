@@ -54,7 +54,7 @@ struct XenditQrRequest {
 }
 
 // Xendit QR Response
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(dead_code)]
 struct XenditQrResponse {
     id: String,
@@ -69,15 +69,13 @@ fn get_photos_dir() -> PathBuf {
 }
 
 #[tauri::command]
-async fn create_xendit_qr(ticket_code: String, amount: i32) -> Result<String, String> {
+async fn create_xendit_qr(ticket_code: String, amount: i32) -> Result<XenditQrResponse, String> {
     let db = get_database();
     
     // 1. Get Settings
     let secret_key = db.get_setting("xendit_secret_key").ok_or("Xendit Secret Key not set")?;
-    let tunnel_url = db.get_setting("tunnel_url").ok_or("Tunnel URL not set. Please set up cloudflared.")?;
 
-    let callback_url = format!("{}/webhook/xendit-qris", tunnel_url);
-    println!("🔐 Creating Xendit QR for {} (ID: {}) with webhook: {}", amount, ticket_code, callback_url);
+    println!("🔐 Creating Xendit QR for amount {} (Ticket: {}) via polling", amount, ticket_code);
     
     // 2. Prepare Request
     let client = reqwest::Client::new();
@@ -86,7 +84,7 @@ async fn create_xendit_qr(ticket_code: String, amount: i32) -> Result<String, St
         qr_type: "DYNAMIC".to_string(),
         currency: "IDR".to_string(),
         amount: amount as f64,
-        callback_url: Some(callback_url),
+        callback_url: None, // No callback URL required for polling
     };
 
     // 3. Call Xendit API
@@ -104,15 +102,44 @@ async fn create_xendit_qr(ticket_code: String, amount: i32) -> Result<String, St
         return Err(format!("Xendit API Error: {}", err_text));
     }
     
+    let resp_json: XenditQrResponse = response.json().await.map_err(|e| format!("Invalid JSON: {}", e))?;
+    Ok(resp_json)
+}
+
+#[tauri::command]
+async fn check_xendit_qr_status(qr_id: String) -> Result<String, String> {
+    let db = get_database();
+    let secret_key = db.get_setting("xendit_secret_key").ok_or("Xendit Secret Key not set")?;
+
+    let client = reqwest::Client::new();
+    let response = client.get(format!("https://api.xendit.co/qr_codes/{}/payments", qr_id))
+        .basic_auth(secret_key, Some(""))
+        .header("api-version", "2022-07-31")
+        .send()
+        .await
+        .map_err(|e| format!("Xendit Status Request Failed: {}", e))?;
+
+    if !response.status().is_success() {
+        let err_text = response.text().await.unwrap_or_default();
+        println!("❌ Xendit Status Error: {}", err_text);
+        return Err(format!("Xendit API Error: {}", err_text));
+    }
+
     let resp_json: serde_json::Value = response.json().await.map_err(|e| format!("Invalid JSON: {}", e))?;
     
-    // Get qr_string from response
-    let qr_string = resp_json["qr_string"]
-        .as_str()
-        .ok_or("QR String not found in response")?
-        .to_string();
-        
-    Ok(qr_string)
+    // Check if there is any payment record with status "SUCCEEDED" or "COMPLETED"
+    if let Some(payments) = resp_json["data"].as_array() {
+        for payment in payments {
+            if let Some(status) = payment["status"].as_str() {
+                if status == "SUCCEEDED" || status == "COMPLETED" {
+                    println!("✅ Verified payment status for QR ID {}: {}", qr_id, status);
+                    return Ok("COMPLETED".to_string());
+                }
+            }
+        }
+    }
+
+    Ok("ACTIVE".to_string())
 }
 
 fn url_encode(s: &str) -> String {
@@ -228,6 +255,49 @@ fn save_photo(ticket_code: String, photo_data: String, filename: String) -> Resu
     Ok(format!("/photos/{}/{}", ticket_code, filename))
 }
 
+// Get backend port from environment variable or .env file
+fn get_backend_port() -> u16 {
+    // Try to get from standard env first
+    if let Ok(port_str) = std::env::var("VITE_BACKEND_PORT") {
+        if let Ok(port) = port_str.trim().parse::<u16>() {
+            return port;
+        }
+    }
+
+    // Otherwise try to find and read .env file in parent directories
+    if let Ok(mut current_dir) = std::env::current_dir() {
+        for _ in 0..5 {
+            let env_path = current_dir.join(".env");
+            if env_path.exists() {
+                if let Ok(content) = std::fs::read_to_string(env_path) {
+                    for line in content.lines() {
+                        let line = line.trim();
+                        if line.starts_with('#') || line.is_empty() {
+                            continue;
+                        }
+                        if let Some((key, val)) = line.split_once('=') {
+                            if key.trim() == "VITE_BACKEND_PORT" {
+                                let val = val.trim().trim_matches('"').trim_matches('\'').trim();
+                                if let Ok(port) = val.parse::<u16>() {
+                                    return port;
+                                
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if let Some(parent) = current_dir.parent() {
+                current_dir = parent.to_path_buf();
+            } else {
+                break;
+            }
+        }
+    }
+
+    3847 // Default fallback port
+}
+
 // Get local IP address
 fn get_local_ip() -> String {
     local_ip_address::local_ip()
@@ -239,7 +309,7 @@ fn get_local_ip() -> String {
 #[tauri::command]
 fn get_gallery_url(ticket_code: String) -> String {
     let ip = get_local_ip();
-    format!("http://{}:3847/gallery/{}", ip, ticket_code)
+    format!("http://{}:{}/gallery/{}", ip, get_backend_port(), ticket_code)
 }
 
 
@@ -704,13 +774,26 @@ fn start_http_server(app_handle: AppHandle) {
                 .map(move |payload: serde_json::Value| {
                     println!("Received Xendit webhook: {:?}", payload);
                     
-                    let status = payload.get("data").and_then(|d| d.get("status")).and_then(|s| s.as_str()).unwrap_or("");
+                    // Support both nested ("data") and flat webhook payload structures
+                    let data_obj = if payload.get("data").is_some() {
+                        payload.get("data").unwrap()
+                    } else {
+                        &payload
+                    };
+                    
+                    let status = data_obj.get("status").and_then(|s| s.as_str()).unwrap_or("");
+                    let reference_id = data_obj.get("reference_id").and_then(|r| r.as_str()).unwrap_or("*");
                     
                     if status == "SUCCEEDED" || status == "COMPLETED" {
-                        let amount = payload.get("data").and_then(|d| d.get("amount")).and_then(|a| a.as_f64()).unwrap_or(0.0) as i32;
+                        let amount = data_obj.get("amount")
+                            .and_then(|a| {
+                                a.as_f64().map(|f| f as i32)
+                                    .or_else(|| a.as_i64().map(|i| i as i32))
+                            })
+                            .unwrap_or(0);
                         
                         let confirm_payload = PaymentConfirmation {
-                            ticket_code: "*".to_string(),
+                            ticket_code: reference_id.to_string(),
                             amount: Some(amount),
                             cashier_id: Some("XENDIT-QRIS".to_string()),
                         };
@@ -718,7 +801,7 @@ fn start_http_server(app_handle: AppHandle) {
                         if let Err(e) = app_handle_xendit.emit("payment-confirmed", confirm_payload) {
                             eprintln!("Failed to emit Xendit payment event: {}", e);
                         } else {
-                            println!("Xendit QRIS Payment event emitted to frontend with wildcard ticket_code");
+                            println!("Xendit QRIS Payment event emitted to frontend for ticket: {}", reference_id);
                         }
 
                         // Send to external API (Rua Rasa Backend)
@@ -742,7 +825,6 @@ fn start_http_server(app_handle: AppHandle) {
                     warp::reply::json(&WebhookResponse {
                         success: true,
                         message: "Xendit webhook processed".to_string(),
-                        
                     })
                 });
 
@@ -780,14 +862,15 @@ fn start_http_server(app_handle: AppHandle) {
                 .with(cors);
 
             let ip = get_local_ip();
-            println!("🚀 Server starting on http://{}:3847", ip);
+            let port = get_backend_port();
+            println!("🚀 Server starting on http://{}:{}", ip, port);
             println!("📁 Photos directory: {:?}", get_photos_dir());
 
             // Cleanup old photos on startup (Disabled per user request - use Admin Panel for manual cleanup)
             // cleanup_old_photos();
 
 
-            warp::serve(routes).run(([0, 0, 0, 0], 3847)).await;
+            warp::serve(routes).run(([0, 0, 0, 0], port)).await;
         });
     });
 }
@@ -917,6 +1000,7 @@ pub fn run() {
             db_get_today_sessions,
             db_get_today_stats,
             create_xendit_qr,
+            check_xendit_qr_status,
             db_mark_session_printed,
             db_get_all_sessions,
             db_clear_all_sessions,

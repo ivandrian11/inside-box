@@ -8,7 +8,6 @@ interface QRISPaymentProps {
   qrError: string | null
   getSessionPrice: () => number
   setQrError: (error: string | null) => void
-  setPaymentMethod: (method: 'CASH' | 'QRIS' | null) => void
 }
 
 export const QRISPayment: React.FC<QRISPaymentProps> = ({
@@ -17,7 +16,6 @@ export const QRISPayment: React.FC<QRISPaymentProps> = ({
   qrError,
   getSessionPrice,
   setQrError,
-  setPaymentMethod,
 }) => {
   return (
     <div className='flex flex-col items-center w-full'>

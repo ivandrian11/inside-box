@@ -46,6 +46,7 @@ export const BottomBar: React.FC<BottomBarProps> = ({
 
         {/* Right: Primary Action Button (Truly FLUSH to right and bottom) */}
         <button
+          id='tour-arrange-submit'
           onClick={handleGenerate}
           disabled={isGenerating}
           className='group relative flex justify-center items-center gap-6 bg-studio-primary disabled:opacity-50 hover:brightness-110 active:brightness-90 min-w-[480px] h-full overflow-hidden italic transition-all duration-300'

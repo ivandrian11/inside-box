@@ -1,7 +1,7 @@
 import Shepherd from 'shepherd.js'
 
 let currentTour: any = null
-let isTourActive = false
+export let isTourActive = false
 const shownTours = new Set<string>()
 
 const defaultStepOptions: any = {
@@ -88,9 +88,10 @@ export const startTourPayment = () => {
 }
 
 // ─── SELECTION TOUR ──────────────────────────────────────────────
-export const startTourSelection = () => {
-  if (!isTourActive || shownTours.has('selection')) return
+export const startTourSelection = (force = false) => {
+  if (!force) return
   cleanupStraggler()
+  isTourActive = true
   shownTours.add('selection')
 
   currentTour = new Shepherd.Tour({
@@ -127,16 +128,17 @@ export const startTourSelection = () => {
   })
 
   currentTour.on('cancel', onCancelHandler)
-  setTimeout(() => currentTour?.start(), 1000)
+  currentTour?.start()
 }
 
 // ─── CAMERA TOUR ─────────────────────────────────────────────────
-export const startTourCamera = (onEnd?: () => void) => {
-  if (!isTourActive || shownTours.has('camera')) {
+export const startTourCamera = (onEnd?: () => void, force = false) => {
+  if (!force) {
     if (onEnd) onEnd()
     return
   }
   cleanupStraggler()
+  isTourActive = true
   shownTours.add('camera')
 
   currentTour = new Shepherd.Tour({
@@ -195,13 +197,14 @@ export const startTourCamera = (onEnd?: () => void) => {
     onCancelHandler()
     if (onEnd) onEnd()
   })
-  setTimeout(() => currentTour?.start(), 1000)
+  currentTour?.start()
 }
 
 // ─── REVIEW TOUR ─────────────────────────────────────────────────
-export const startTourReview = () => {
-  if (!isTourActive || shownTours.has('review')) return
+export const startTourReview = (force = false) => {
+  if (!force) return
   cleanupStraggler()
+  isTourActive = true
   shownTours.add('review')
 
   currentTour = new Shepherd.Tour({
@@ -238,16 +241,17 @@ export const startTourReview = () => {
   })
 
   currentTour.on('cancel', onCancelHandler)
-  setTimeout(() => currentTour?.start(), 1000)
+  currentTour?.start()
 }
 
 // ─── ARRANGE TOUR ─────────────────────────────────────────────────
-export const startTourArrange = (onEnd?: () => void) => {
-  if (!isTourActive || shownTours.has('arrange')) {
+export const startTourArrange = (onEnd?: () => void, force = false) => {
+  if (!force) {
     if (onEnd) onEnd()
     return
   }
   cleanupStraggler()
+  isTourActive = true
   shownTours.add('arrange')
 
   currentTour = new Shepherd.Tour({
@@ -257,9 +261,37 @@ export const startTourArrange = (onEnd?: () => void) => {
 
   currentTour.addStep({
     id: 'arrange-drag',
-    title: 'Geser & Zoom',
-    text: 'Bebas berekspresi! Kamu bisa geser (drag) atau pinch buat zoom foto biar posisinya makin pas dan estetik di dalam frame. 🔍👌',
+    title: 'Geser & Zoom Foto',
+    text: 'Bebas berekspresi! Kamu bisa geser (drag) foto di dalam masing-masing slot untuk menyesuaikan posisinya. Gunakan scroll mouse atau cubit (pinch) layar untuk zoom in/out agar posisinya pas! 🔍👌',
     attachTo: { element: '#tour-arrange-drag', on: 'right' },
+    buttons: [
+      {
+        text: 'Lanjut',
+        action: () => currentTour?.next(),
+        classes: btnClasses,
+      },
+    ],
+  })
+
+  currentTour.addStep({
+    id: 'arrange-filters',
+    title: 'Pilih Filter Foto',
+    text: 'Ingin warna foto lebih estetik? Pilih salah satu filter instan di menu samping ini (klik "More Filters" untuk pilihan lebih lengkap)! ✨🎨',
+    attachTo: { element: '#tour-arrange-filters', on: 'left' },
+    buttons: [
+      {
+        text: 'Lanjut',
+        action: () => currentTour?.next(),
+        classes: btnClasses,
+      },
+    ],
+  })
+
+  currentTour.addStep({
+    id: 'arrange-submit',
+    title: 'Selesai & Cetak',
+    text: 'Jika posisi foto dan filternya sudah pas, klik tombol "SELESAI & CETAK" ini untuk memproses dan mencetak hasil fotomu! 🖨️✨',
+    attachTo: { element: '#tour-arrange-submit', on: 'top' },
     buttons: [
       {
         text: 'Mengerti',
@@ -276,16 +308,17 @@ export const startTourArrange = (onEnd?: () => void) => {
     onCancelHandler()
     if (onEnd) onEnd()
   })
-  setTimeout(() => currentTour?.start(), 1000)
+  currentTour?.start()
 }
 
 // ─── DONE TOUR (FINAL STEP) ───────────────────────────────────────
-export const startTourDone = (onEnd?: () => void) => {
-  if (!isTourActive || shownTours.has('done')) {
+export const startTourDone = (onEnd?: () => void, force = false) => {
+  if (!force) {
     if (onEnd) onEnd()
     return
   }
   cleanupStraggler()
+  isTourActive = true
   shownTours.add('done')
 
   currentTour = new Shepherd.Tour({
@@ -331,5 +364,5 @@ export const startTourDone = (onEnd?: () => void) => {
     onCancelHandler()
     if (onEnd) onEnd()
   })
-  setTimeout(() => currentTour?.start(), 1000)
+  currentTour?.start()
 }

@@ -5,11 +5,11 @@ import {
   Timer,
   AlertTriangle,
   ListOrdered,
+  HelpCircle,
 } from 'lucide-react'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { SESSION_DURATION_SECONDS } from '../constants'
-import { startTourPayment } from '../services/tourService'
 
 import { QRISPayment } from './StepPayment/QRISPayment'
 import { CashPayment } from './StepPayment/CashPayment'
@@ -66,6 +66,7 @@ export const StepPayment: React.FC = () => {
     'WAITING' | 'PROCESSING' | 'SUCCESS' | 'INSTRUCTIONS'
   >('WAITING')
   const [qrString, setQrString] = useState<string>('') // Store Xendit QR String
+  const [qrId, setQrId] = useState<string | null>(null) // Store Xendit QR ID for status polling
   const [isGeneratingQR, setIsGeneratingQR] = useState(false)
   const [qrError, setQrError] = useState<string | null>(null)
 
@@ -79,33 +80,21 @@ export const StepPayment: React.FC = () => {
 
   // Listen for webhook confirmation from Tauri backend
   useEffect(() => {
-    let unlisten: (() => void) | undefined
-
-    const setupListener = async () => {
-      try {
-        unlisten = await listen<{ ticket_code: string }>(
-          'payment-confirmed',
-          (event) => {
-            console.log('Payment confirmed via webhook:', event.payload)
-            if (
-              event.payload.ticket_code === ticketCode ||
-              event.payload.ticket_code === '*'
-            ) {
-              handlePaymentConfirmed()
-            }
-          },
-        )
-      } catch (error) {
-        console.error('Failed to setup payment listener:', error)
-      }
-    }
-
-    setupListener()
+    const promise = listen<{ ticket_code: string }>(
+      'payment-confirmed',
+      (event) => {
+        console.log('Payment confirmed via webhook:', event.payload)
+        if (
+          event.payload.ticket_code === ticketCode ||
+          event.payload.ticket_code === '*'
+        ) {
+          handlePaymentConfirmed()
+        }
+      },
+    )
 
     return () => {
-      if (unlisten) {
-        unlisten()
-      }
+      promise.then((unlistenFn) => unlistenFn())
     }
   }, [ticketCode])
 
@@ -119,15 +108,6 @@ export const StepPayment: React.FC = () => {
       }, 1500)
     }, 1000)
   }
-
-  // Trigger tour when instructions popup is shown
-  useEffect(() => {
-    if (status === 'INSTRUCTIONS') {
-      setTimeout(() => {
-        startTourPayment()
-      }, 500)
-    }
-  }, [status])
 
   // Called when user clicks "Mulai" in instructions popup
   const handleStartSession = () => {
@@ -145,12 +125,19 @@ export const StepPayment: React.FC = () => {
           const price = getSessionPrice() * 1000 // Convert to Rupiah
           console.log(`Generating QR for ${ticketCode} amount ${price}`)
 
-          const qr = await invoke<string>('create_xendit_qr', {
+          interface XenditQrResponse {
+            id: string
+            qr_string: string
+            status: string
+          }
+
+          const response = await invoke<XenditQrResponse>('create_xendit_qr', {
             ticketCode,
             amount: 1,
           })
 
-          setQrString(qr)
+          setQrString(response.qr_string)
+          setQrId(response.id)
         } catch (error: any) {
           console.error('Failed to generate Xendit QR:', error)
           setQrError(
@@ -164,6 +151,32 @@ export const StepPayment: React.FC = () => {
       generateQR()
     }
   }, [paymentMethod, ticketCode, qrString, isGeneratingQR, qrError])
+
+  // Polling for QR status
+  useEffect(() => {
+    if (paymentMethod !== 'QRIS' || status !== 'WAITING' || !qrId) {
+      return
+    }
+
+    const intervalId = setInterval(async () => {
+      try {
+        console.log(`Checking payment status for QR ID: ${qrId}`)
+        const qrStatus = await invoke<string>('check_xendit_qr_status', {
+          qrId,
+        })
+        console.log(`QR status: ${qrStatus}`)
+        if (qrStatus === 'COMPLETED' || qrStatus === 'SUCCEEDED') {
+          handlePaymentConfirmed()
+        }
+      } catch (error) {
+        console.error('Failed to check Xendit QR status:', error)
+      }
+    }, 3000)
+
+    return () => {
+      clearInterval(intervalId)
+    }
+  }, [paymentMethod, status, qrId])
 
   // For development/testing
   const simulatePayment = () => {
@@ -229,7 +242,18 @@ export const StepPayment: React.FC = () => {
                 </div>
               </div>
 
-
+              <div className='flex items-start gap-3 bg-blue-50/50 p-4 border border-blue-100 rounded-xl'>
+                <HelpCircle
+                  className='mt-0.5 text-blue-500 shrink-0'
+                  size={20}
+                />
+                <div>
+                  <h4 className='mb-1 font-bold text-blue-700'>Butuh Bantuan?</h4>
+                  <p className='text-blue-800/80 text-sm'>
+                    Jika bingung di halaman mana pun nanti, cukup klik tombol <span className='font-extrabold text-blue-700'>?</span> di pojok kiri atas untuk melihat petunjuk.
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Right Column - Tips */}
@@ -314,7 +338,6 @@ export const StepPayment: React.FC = () => {
               qrError={qrError}
               getSessionPrice={getSessionPrice}
               setQrError={setQrError}
-              setPaymentMethod={setPaymentMethod}
             />
           )}
         </div>

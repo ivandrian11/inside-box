@@ -1,8 +1,15 @@
 import React, { useState } from 'react'
 import { useBooth } from '../hooks/usePhotoBooth'
-import { Timer, ArrowLeft, X, AlertTriangle } from 'lucide-react'
+import { Timer, ArrowLeft, X, AlertTriangle, HelpCircle } from 'lucide-react'
 import { AppStep } from '../types'
 import { AdminPanel } from './AdminPanel'
+import {
+  startTourSelection,
+  startTourCamera,
+  startTourReview,
+  startTourArrange,
+  startTourDone,
+} from '../services/tourService'
 interface LayoutProps {
   children: React.ReactNode
   title?: string
@@ -26,6 +33,15 @@ export const Layout: React.FC<LayoutProps> = ({
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [showAdmin, setShowAdmin] = useState(false)
   const [adminClickCount, setAdminClickCount] = useState(0)
+
+  const hasTourGuide =
+    step === AppStep.TEMPLATE_SELECT ||
+    step === AppStep.FEATURE_SELECT ||
+    step === AppStep.CAMERA ||
+    step === AppStep.REVIEW ||
+    step === AppStep.ARRANGE ||
+    step === AppStep.RESULT
+
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -96,6 +112,30 @@ export const Layout: React.FC<LayoutProps> = ({
     setTimeout(() => setAdminClickCount(0), 2000)
   }
 
+  // Manual help tour trigger
+  const handleHelpClick = () => {
+    switch (step) {
+      case AppStep.TEMPLATE_SELECT:
+      case AppStep.FEATURE_SELECT:
+        startTourSelection(true)
+        break
+      case AppStep.CAMERA:
+        startTourCamera(undefined, true)
+        break
+      case AppStep.REVIEW:
+        startTourReview(true)
+        break
+      case AppStep.ARRANGE:
+        startTourArrange(undefined, true)
+        break
+      case AppStep.RESULT:
+        startTourDone(undefined, true)
+        break
+      default:
+        break
+    }
+  }
+
   return (
     <div className='relative flex flex-col bg-studio-bg w-full h-screen overflow-hidden font-body'>
       {/* Ambient Orbs Background */}
@@ -142,7 +182,28 @@ export const Layout: React.FC<LayoutProps> = ({
                 <span className='font-display font-bold text-sm tracking-widest italic'>BACK</span>
               </button>
             )}
+            {/* "?" Help Button when there is NO Back button */}
+            {!showBack && hasTourGuide && (
+              <button
+                onClick={handleHelpClick}
+                className='flex items-center justify-center bg-white text-studio-primary hover:bg-studio-primary/5 border-2 border-studio-primary/20 hover:border-studio-primary/40 p-2.5 rounded-full shadow-lg shadow-studio-primary/5 hover:scale-105 active:scale-95 transition-all pointer-events-auto'
+                title="Bantuan Halaman Ini"
+              >
+                <HelpCircle size={20} strokeWidth={3} />
+              </button>
+            )}
           </div>
+
+          {/* "?" Help Button when there IS a Back button (placed below the Back button) */}
+          {showBack && hasTourGuide && (
+            <button
+              onClick={handleHelpClick}
+              className='flex items-center justify-center bg-white text-studio-primary hover:bg-studio-primary/5 border-2 border-studio-primary/20 hover:border-studio-primary/40 p-2.5 rounded-full shadow-lg shadow-studio-primary/5 hover:scale-105 active:scale-95 transition-all pointer-events-auto'
+              title="Bantuan Halaman Ini"
+            >
+              <HelpCircle size={20} strokeWidth={3} />
+            </button>
+          )}
 
 
         </div>
@@ -225,30 +286,30 @@ export const Layout: React.FC<LayoutProps> = ({
 
       {/* Exit Confirmation Modal */}
       {showExitConfirm && (
-        <div className='z-50 absolute inset-0 flex justify-center items-center bg-black/80 backdrop-blur-sm animate-fade-in'>
-          <div className='bg-[#1A1614] shadow-[0_0_50px_rgba(0,0,0,0.8)] p-8 border border-sasak-gold/30 rounded-2xl w-full max-w-md text-center scale-100 transform'>
-            <div className='flex justify-center items-center bg-red-900/20 mx-auto mb-4 border border-red-500/30 rounded-full w-16 h-16 text-red-500'>
+        <div className='z-50 absolute inset-0 flex justify-center items-center bg-slate-900/40 backdrop-blur-md animate-fade-in'>
+          <div className='bg-white shadow-2xl shadow-studio-text/10 p-8 border border-studio-border/60 rounded-3xl w-full max-w-md text-center scale-100 transform'>
+            <div className='flex justify-center items-center bg-red-50 mx-auto mb-5 border border-red-200 rounded-full w-16 h-16 text-red-500 shadow-sm'>
               <AlertTriangle size={32} />
             </div>
-            <h3 className='mb-2 font-display text-white text-2xl'>
+            <h3 className='mb-2 font-display font-bold text-studio-text text-3xl italic'>
               Akhiri Sesi?
             </h3>
-            <p className='mb-8 font-body text-white/60'>
+            <p className='mb-8 font-body text-studio-textLight text-sm leading-relaxed'>
               Foto yang belum disimpan akan hilang dan Anda harus melakukan
               pembayaran ulang untuk memulai sesi baru.
             </p>
             <div className='flex gap-4'>
               <button
                 onClick={() => setShowExitConfirm(false)}
-                className='flex-1 hover:bg-white/10 py-3 border border-white/20 rounded-full text-white transition-colors'
+                className='flex-1 bg-white hover:bg-studio-bg px-6 py-3.5 border-2 border-studio-border rounded-full font-display font-bold text-sm tracking-widest italic text-studio-textLight hover:text-studio-text transition-all hover:scale-105 active:scale-95 shadow-sm shadow-studio-text/5'
               >
-                Batal
+                BATAL
               </button>
               <button
                 onClick={confirmExit}
-                className='flex-1 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-900/20 py-3 rounded-full font-bold text-white transition-colors'
+                className='flex-1 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20 px-6 py-3.5 rounded-full font-display font-bold text-sm tracking-widest italic text-white transition-all hover:scale-105 active:scale-95'
               >
-                Ya, Keluar
+                YA, KELUAR
               </button>
             </div>
           </div>

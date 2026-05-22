@@ -38,6 +38,9 @@ export const SettingKeys = {
   DEBUG_MODE: 'debug_mode',
   XENDIT_SECRET_KEY: 'xendit_secret_key',
   SESSION_TIMER_SCOPE: 'session_timer_scope',
+  FLIP_HORIZONTAL: 'flip_horizontal',
+  FLIP_VERTICAL: 'flip_vertical',
+  IS_PORTRAIT: 'is_portrait',
 } as const
 
 // ============ SETTINGS FUNCTIONS ============
@@ -141,6 +144,51 @@ export async function getSelectedCameraId(): Promise<string | null> {
  */
 export async function setSelectedCameraId(cameraId: string): Promise<boolean> {
   return setSetting(SettingKeys.SELECTED_CAMERA_ID, cameraId)
+}
+
+/**
+ * Get flip horizontal (default: false)
+ */
+export async function getFlipHorizontal(): Promise<boolean> {
+  const value = await getSetting(SettingKeys.FLIP_HORIZONTAL)
+  return value === 'true'
+}
+
+/**
+ * Set flip horizontal
+ */
+export async function setFlipHorizontal(enabled: boolean): Promise<boolean> {
+  return setSetting(SettingKeys.FLIP_HORIZONTAL, enabled.toString())
+}
+
+/**
+ * Get flip vertical (default: false)
+ */
+export async function getFlipVertical(): Promise<boolean> {
+  const value = await getSetting(SettingKeys.FLIP_VERTICAL)
+  return value === 'true'
+}
+
+/**
+ * Set flip vertical
+ */
+export async function setFlipVertical(enabled: boolean): Promise<boolean> {
+  return setSetting(SettingKeys.FLIP_VERTICAL, enabled.toString())
+}
+
+/**
+ * Get is portrait (default: false)
+ */
+export async function getIsPortrait(): Promise<boolean> {
+  const value = await getSetting(SettingKeys.IS_PORTRAIT)
+  return value === 'true'
+}
+
+/**
+ * Set is portrait
+ */
+export async function setIsPortrait(enabled: boolean): Promise<boolean> {
+  return setSetting(SettingKeys.IS_PORTRAIT, enabled.toString())
 }
 
 /**
@@ -364,6 +412,9 @@ export async function migrateLocalStorageToDatabase(): Promise<void> {
       dbKey: SettingKeys.SESSION_PRICE_THOUSANDS,
     },
     { localKey: 'selectedCameraId', dbKey: SettingKeys.SELECTED_CAMERA_ID },
+    { localKey: 'flipHorizontal', dbKey: SettingKeys.FLIP_HORIZONTAL },
+    { localKey: 'flipVertical', dbKey: SettingKeys.FLIP_VERTICAL },
+    { localKey: 'isPortrait', dbKey: SettingKeys.IS_PORTRAIT },
   ]
 
   for (const { localKey, dbKey } of migrations) {

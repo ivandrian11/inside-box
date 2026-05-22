@@ -95,7 +95,7 @@ export const ReviewView: React.FC<ReviewViewProps> = ({
   return (
     <div className='fixed inset-0 flex bg-studio-bg overflow-hidden animate-fade-in'>
       {/* Left Side: Photo Grid */}
-      <div className='flex-1 px-12 pt-48 pb-12 overflow-y-auto no-scrollbar'>
+      <div id='tour-review-grid' className='flex-1 px-12 pt-48 pb-12 overflow-y-auto no-scrollbar'>
         <div className='gap-6 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 mx-auto max-w-5xl'>
           {sortedDisplayIndices.map((originalIndex) => (
             <PhotoCard
@@ -123,6 +123,7 @@ export const ReviewView: React.FC<ReviewViewProps> = ({
 
             {/* Template Preview Container - Enlarged and Elevated */}
             <div
+              id='tour-review-template'
               className='relative bg-white shadow-2xl mx-auto rounded-2xl ring-8 ring-studio-bg/10 w-[320px] overflow-hidden'
               style={{
                 aspectRatio: selectedTemplate

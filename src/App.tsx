@@ -54,7 +54,8 @@ const BoothContent: React.FC = () => {
     const recoveredPhotos = [...session.photos]
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
       .map((filename: string) => {
-        const url = `http://127.0.0.1:3847/photos/${session.ticket_code}/${filename}`
+        const port = import.meta.env.VITE_BACKEND_PORT || '3847'
+        const url = `http://127.0.0.1:${port}/photos/${session.ticket_code}/${filename}`
         return {
           original: url,
           activeFlipIndex: 0,

@@ -20,6 +20,12 @@ import {
   setSessionPriceThousands,
   getSelectedCameraId,
   setSelectedCameraId,
+  getFlipHorizontal,
+  setFlipHorizontal,
+  getFlipVertical,
+  setFlipVertical,
+  getIsPortrait,
+  setIsPortrait,
   getDebugMode,
   setDebugMode,
   getAllSessions,
@@ -89,6 +95,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     return localStorage.getItem('sessionTimerScope') || 'STEP_03_ONLY'
   })
 
+  // Camera flip & orientation states
+  const [flipHorizontal, setFlipHorizontalState] = useState<boolean>(() => {
+    return localStorage.getItem('flipHorizontal') === 'true'
+  })
+  const [flipVertical, setFlipVerticalState] = useState<boolean>(() => {
+    return localStorage.getItem('flipVertical') === 'true'
+  })
+  const [isPortrait, setIsPortraitState] = useState<boolean>(() => {
+    return localStorage.getItem('isPortrait') === 'true'
+  })
+
 
 
   // Load settings on mount (immediately when panel opens)
@@ -99,7 +116,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     loadSessionPrice()
     loadDebugMode()
     loadTimerScope()
+    loadCameraSettings()
   }, [])
+
+  const loadCameraSettings = async () => {
+    const flipH = await getFlipHorizontal()
+    const flipV = await getFlipVertical()
+    const portrait = await getIsPortrait()
+    setFlipHorizontalState(flipH)
+    setFlipVerticalState(flipV)
+    setIsPortraitState(portrait)
+  }
 
   const loadTimerScope = async () => {
     const { getSessionTimerScope } = await import('../services/databaseService')
@@ -254,9 +281,43 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     await setSelectedCameraId(cameraId)
     // Also keep localStorage for backward compatibility
     localStorage.setItem('selectedCameraId', cameraId)
+    window.dispatchEvent(new Event('camera-settings-changed'))
     showMessage('success', 'Kamera berhasil dipilih')
     // Start preview with new camera
     startPreview(cameraId || undefined)
+  }
+
+  const handleFlipHorizontalChange = async (enabled: boolean) => {
+    setFlipHorizontalState(enabled)
+    await setFlipHorizontal(enabled)
+    localStorage.setItem('flipHorizontal', enabled.toString())
+    window.dispatchEvent(new Event('camera-settings-changed'))
+    showMessage(
+      'success',
+      `Flip Horizontal ${enabled ? 'diaktifkan' : 'dinonaktifkan'}`,
+    )
+  }
+
+  const handleFlipVerticalChange = async (enabled: boolean) => {
+    setFlipVerticalState(enabled)
+    await setFlipVertical(enabled)
+    localStorage.setItem('flipVertical', enabled.toString())
+    window.dispatchEvent(new Event('camera-settings-changed'))
+    showMessage(
+      'success',
+      `Flip Vertical ${enabled ? 'diaktifkan' : 'dinonaktifkan'}`,
+    )
+  }
+
+  const handleIsPortraitChange = async (enabled: boolean) => {
+    setIsPortraitState(enabled)
+    await setIsPortrait(enabled)
+    localStorage.setItem('isPortrait', enabled.toString())
+    window.dispatchEvent(new Event('camera-settings-changed'))
+    showMessage(
+      'success',
+      `Mode Portrait ${enabled ? 'diaktifkan' : 'dinonaktifkan'}`,
+    )
   }
 
   const handleDeleteTodayPhotos = async () => {
@@ -573,6 +634,45 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 ))}
               </select>
 
+              {/* Camera Orientation and Flips */}
+              <div className='grid grid-cols-3 gap-2 pt-2'>
+                <label className='flex flex-col items-center justify-center bg-white p-3 border border-studio-border rounded-xl hover:border-studio-primary/30 transition-all cursor-pointer group text-center'>
+                  <input
+                    type='checkbox'
+                    checked={flipHorizontal}
+                    onChange={(e) => handleFlipHorizontalChange(e.target.checked)}
+                    className='mb-1.5 w-5 h-5 accent-studio-primary cursor-pointer'
+                  />
+                  <span className='font-display font-bold text-studio-text text-[10px] uppercase tracking-wider'>
+                    Flip H
+                  </span>
+                </label>
+
+                <label className='flex flex-col items-center justify-center bg-white p-3 border border-studio-border rounded-xl hover:border-studio-primary/30 transition-all cursor-pointer group text-center'>
+                  <input
+                    type='checkbox'
+                    checked={flipVertical}
+                    onChange={(e) => handleFlipVerticalChange(e.target.checked)}
+                    className='mb-1.5 w-5 h-5 accent-studio-primary cursor-pointer'
+                  />
+                  <span className='font-display font-bold text-studio-text text-[10px] uppercase tracking-wider'>
+                    Flip V
+                  </span>
+                </label>
+
+                <label className='flex flex-col items-center justify-center bg-white p-3 border border-studio-border rounded-xl hover:border-studio-primary/30 transition-all cursor-pointer group text-center'>
+                  <input
+                    type='checkbox'
+                    checked={isPortrait}
+                    onChange={(e) => handleIsPortraitChange(e.target.checked)}
+                    className='mb-1.5 w-5 h-5 accent-studio-primary cursor-pointer'
+                  />
+                  <span className='font-display font-bold text-studio-text text-[10px] uppercase tracking-wider'>
+                    Portrait
+                  </span>
+                </label>
+              </div>
+
               {/* Camera Preview */}
               <div className='mt-2'>
                 {previewStream ? (
@@ -582,8 +682,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       autoPlay
                       playsInline
                       muted
-                      className='border-4 border-white shadow-lg rounded-xl w-full aspect-video object-cover'
-                      style={{ transform: 'scaleX(-1)' }}
+                      className='border-4 border-white shadow-lg rounded-xl w-full aspect-video object-cover transition-transform duration-500'
+                      style={{
+                        transform: isPortrait
+                          ? `rotate(-90deg) scale(1.3) scaleX(${
+                              flipVertical ? -1 : 1
+                            }) scaleY(${flipHorizontal ? 1 : -1})`
+                          : `scaleX(${flipHorizontal ? 1 : -1}) scaleY(${
+                              flipVertical ? -1 : 1
+                            })`,
+                      }}
                     />
                     <button
                       onClick={stopPreview}

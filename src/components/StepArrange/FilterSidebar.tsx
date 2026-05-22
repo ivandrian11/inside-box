@@ -27,7 +27,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
   }, [photos, selectedSequence])
 
   return (
-    <div className='md:top-24 md:right-0 right-0 bottom-[140px] md:bottom-auto z-40 fixed flex flex-col items-center bg-white/95 backdrop-blur-3xl p-6 border-y-2 border-l-2 border-studio-border md:rounded-l-[3rem] w-full md:w-56 shadow-2xl shadow-studio-primary/20 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden scale-90 md:scale-100 origin-right'>
+    <div id='tour-arrange-filters' className='md:top-24 md:right-0 right-0 bottom-[140px] md:bottom-auto z-40 fixed flex flex-col items-center bg-white/95 backdrop-blur-3xl p-6 border-y-2 border-l-2 border-studio-border md:rounded-l-[3rem] w-full md:w-56 shadow-2xl shadow-studio-primary/20 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden scale-90 md:scale-100 origin-right'>
       
       {/* Sidebar Header - Side by Side */}
       <div className='flex flex-row items-center justify-center gap-4 bg-transparent mb-6'>
