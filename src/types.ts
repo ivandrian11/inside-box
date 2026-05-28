@@ -65,4 +65,5 @@ export interface BoothState {
   isTimerPaused: boolean // Pause timer
   isTimeout: boolean // Flag jika sesi berakhir karena waktu habis
   showTimeoutModal: boolean // Flag untuk menampilkan modal timeout
+  totalShots: number // Total capture attempts (including history/retakes)
 }

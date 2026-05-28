@@ -1,5 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 
+export const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbypxx4S5AM441hPM-jwvgeN7q54hkjevgJWu3UHD4INWhdsClccj3Qtus2MNfSirXWL/exec'
+
 // Types
 export interface Setting {
   key: string
@@ -11,20 +13,19 @@ export interface SessionLog {
   id: number
   ticket_code: string
   template_name: string | null
-  background_name: string | null
   filter_used: string | null
   photo_count: number
-  printed: boolean
+  place: string | null
   session_price: number
   session_duration: number
   actual_duration: number
+  drive_url: string | null
   created_at: string
 }
 
 export interface TodayStats {
   total_sessions: number
   total_revenue: number
-  printed_count: number
 }
 
 // Setting Keys Constants
@@ -34,13 +35,13 @@ export const SettingKeys = {
   SELECTED_CAMERA_ID: 'selected_camera_id',
   ADMIN_PIN: 'admin_pin',
   AUTO_PRINT: 'auto_print',
-  TUNNEL_URL: 'tunnel_url',
   DEBUG_MODE: 'debug_mode',
   XENDIT_SECRET_KEY: 'xendit_secret_key',
   SESSION_TIMER_SCOPE: 'session_timer_scope',
   FLIP_HORIZONTAL: 'flip_horizontal',
   FLIP_VERTICAL: 'flip_vertical',
   IS_PORTRAIT: 'is_portrait',
+  PLACE: 'place',
 } as const
 
 // ============ SETTINGS FUNCTIONS ============
@@ -206,19 +207,6 @@ export async function setDebugMode(enabled: boolean): Promise<boolean> {
   return setSetting(SettingKeys.DEBUG_MODE, enabled.toString())
 }
 
-/**
- * Get tunnel URL setting
- */
-export async function getTunnelUrlSetting(): Promise<string | null> {
-  return getSetting(SettingKeys.TUNNEL_URL)
-}
-
-/**
- * Set tunnel URL setting
- */
-export async function setTunnelUrlSetting(url: string): Promise<boolean> {
-  return setSetting(SettingKeys.TUNNEL_URL, url)
-}
 
 /**
  * Get Xendit Secret Key
@@ -249,6 +237,21 @@ export async function setSessionTimerScope(scope: string): Promise<boolean> {
   return setSetting(SettingKeys.SESSION_TIMER_SCOPE, scope)
 }
 
+/**
+ * Get place setting (default: '')
+ */
+export async function getPlace(): Promise<string> {
+  const value = await getSetting(SettingKeys.PLACE)
+  return value || ''
+}
+
+/**
+ * Set place setting
+ */
+export async function setPlace(place: string): Promise<boolean> {
+  return setSetting(SettingKeys.PLACE, place)
+}
+
 // ============ SESSION LOG FUNCTIONS ============
 
 /**
@@ -257,31 +260,49 @@ export async function setSessionTimerScope(scope: string): Promise<boolean> {
 export async function logSession(
   ticketCode: string,
   templateName: string | null,
-  backgroundName: string | null,
   filterUsed: string | null,
   photoCount: number,
-  printed: boolean,
+  place: string | null,
   sessionPrice: number,
   sessionDuration: number,
   actualDuration: number,
+  driveUrl: string | null = null,
 ): Promise<number | null> {
   try {
     const sessionId = await invoke<number>('db_log_session', {
       ticketCode,
       templateName,
-      backgroundName,
       filterName: filterUsed,
       photoCount,
-      printed,
+      place,
       sessionPrice,
       sessionDuration,
       actualDuration,
+      driveUrl,
     })
     console.log(`📝 Session logged: ${ticketCode} (ID: ${sessionId})`)
     return sessionId
   } catch (error) {
     console.error('Failed to log session:', error)
     return null
+  }
+}
+
+/**
+ * Update Google Drive URL for a session
+ */
+export async function updateSessionDriveUrl(
+  ticketCode: string,
+  driveUrl: string,
+): Promise<boolean> {
+  try {
+    return await invoke<boolean>('db_update_session_drive_url', {
+      ticketCode,
+      driveUrl,
+    })
+  } catch (error) {
+    console.error('Failed to update session drive URL:', error)
+    return false
   }
 }
 
@@ -302,32 +323,18 @@ export async function getTodaySessions(): Promise<SessionLog[]> {
  */
 export async function getTodayStats(): Promise<TodayStats> {
   try {
-    const [total_sessions, total_revenue, printed_count] =
-      await invoke<[number, number, number]>('db_get_today_stats')
+    const [total_sessions, total_revenue] =
+      await invoke<[number, number]>('db_get_today_stats')
     return {
       total_sessions,
       total_revenue,
-      printed_count,
     }
   } catch (error) {
     console.error('Failed to get today stats:', error)
     return {
       total_sessions: 0,
       total_revenue: 0,
-      printed_count: 0,
     }
-  }
-}
-
-/**
- * Mark a session as printed
- */
-export async function markSessionPrinted(ticketCode: string): Promise<boolean> {
-  try {
-    return await invoke<boolean>('db_mark_session_printed', { ticketCode })
-  } catch (error) {
-    console.error('Failed to mark session as printed:', error)
-    return false
   }
 }
 
@@ -393,6 +400,42 @@ export async function exportToGoogleSheet(
   } catch (error: any) {
     console.error('Export error:', error)
     return `Error Network: ${error.message || 'Gagal terhubung'}`
+  }
+}
+
+/**
+ * Export only new, unsent sessions to Google Sheets
+ */
+export async function exportNewSessions(scriptUrl: string): Promise<string> {
+  try {
+    if (!scriptUrl) return 'URL Script kosong'
+
+    const allData = await getAllSessions()
+    if (allData.length === 0) {
+      return 'Database kosong'
+    }
+
+    const lastExportId = parseInt(
+      localStorage.getItem('last_export_id') || '0',
+      10,
+    )
+
+    const newData = allData.filter((s) => s.id > lastExportId)
+    if (newData.length === 0) {
+      return 'Semua data sudah diexport'
+    }
+
+    console.log(`📤 Exporting ${newData.length} unsent sessions...`)
+    const result = await exportToGoogleSheet(scriptUrl, newData)
+    if (result.includes('Berhasil')) {
+      const maxId = Math.max(...newData.map((s) => s.id))
+      localStorage.setItem('last_export_id', maxId.toString())
+      return `Berhasil: ${newData.length} data baru diexport`
+    }
+    return result
+  } catch (error: any) {
+    console.error('Failed to export new sessions:', error)
+    return `Error: ${error.message || error}`
   }
 }
 

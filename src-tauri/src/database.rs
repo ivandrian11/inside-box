@@ -18,13 +18,13 @@ pub struct SessionLog {
     pub id: i64,
     pub ticket_code: String,
     pub template_name: Option<String>,
-    pub background_name: Option<String>,
     pub filter_used: Option<String>,
     pub photo_count: i32,
-    pub printed: bool,
+    pub place: Option<String>,
     pub session_price: i32,
     pub session_duration: i32,
     pub actual_duration: i32,
+    pub drive_url: Option<String>,
     pub created_at: String,
 }
 
@@ -59,21 +59,21 @@ impl Database {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 ticket_code TEXT NOT NULL UNIQUE,
                 template_name TEXT,
-                background_name TEXT,
                 photo_count INTEGER DEFAULT 0,
-                printed INTEGER DEFAULT 0,
+                place TEXT,
                 session_price INTEGER DEFAULT 25,
                 session_duration INTEGER DEFAULT 10,
+                drive_url TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )",
             [],
         )?;
         
-        // Add background_name column if not exists (migration)
+        // Remove background_name column if SQLite version supports it
         conn.execute(
-            "ALTER TABLE session_logs ADD COLUMN background_name TEXT",
+            "ALTER TABLE session_logs DROP COLUMN background_name",
             [],
-        ).ok(); // Ignore error if column already exists
+        ).ok();
 
         // Add filter_name column if not exists (migration)
         conn.execute(
@@ -85,6 +85,24 @@ impl Database {
         // Add actual_duration column if not exists (migration)
         conn.execute(
             "ALTER TABLE session_logs ADD COLUMN actual_duration INTEGER DEFAULT 0",
+            [],
+        ).ok();
+
+        // Add place column if not exists (migration)
+        conn.execute(
+            "ALTER TABLE session_logs ADD COLUMN place TEXT",
+            [],
+        ).ok();
+
+        // Add drive_url column if not exists (migration)
+        conn.execute(
+            "ALTER TABLE session_logs ADD COLUMN drive_url TEXT",
+            [],
+        ).ok();
+
+        // Remove printed column if sqlite version supports it
+        conn.execute(
+            "ALTER TABLE session_logs DROP COLUMN printed",
             [],
         ).ok();
 
@@ -151,40 +169,50 @@ impl Database {
         &self,
         ticket_code: &str,
         template_name: Option<&str>,
-        background_name: Option<&str>,
         filter_name: Option<&str>,
         photo_count: i32,
-        printed: bool,
+        place: Option<&str>,
         session_price: i32,
         session_duration: i32,
         actual_duration: i32,
+        drive_url: Option<&str>,
     ) -> SqliteResult<i64> {
         let created_at = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT OR REPLACE INTO session_logs (ticket_code, template_name, background_name, filter_name, photo_count, printed, session_price, session_duration, actual_duration, created_at) 
+            "INSERT OR REPLACE INTO session_logs (ticket_code, template_name, filter_name, photo_count, place, session_price, session_duration, actual_duration, drive_url, created_at) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             rusqlite::params![
                 ticket_code,
                 template_name,
-                background_name,
                 filter_name,
                 photo_count,
-                printed as i32,
+                place,
                 session_price,
                 session_duration,
                 actual_duration,
+                drive_url,
                 created_at
             ],
         )?;
         Ok(conn.last_insert_rowid())
+    }
+
+    // Update Google Drive URL for a session
+    pub fn update_session_drive_url(&self, ticket_code: &str, drive_url: &str) -> SqliteResult<bool> {
+        let conn = self.conn.lock().unwrap();
+        let affected = conn.execute(
+            "UPDATE session_logs SET drive_url = ? WHERE ticket_code = ?",
+            rusqlite::params![drive_url, ticket_code],
+        )?;
+        Ok(affected > 0)
     }
     
     // Get session logs for today
     pub fn get_today_sessions(&self) -> SqliteResult<Vec<SessionLog>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, ticket_code, template_name, background_name, filter_name, photo_count, printed, session_price, session_duration, actual_duration, created_at 
+            "SELECT id, ticket_code, template_name, filter_name, photo_count, place, session_price, session_duration, actual_duration, drive_url, created_at 
              FROM session_logs 
              WHERE date(created_at) = date('now')
              ORDER BY created_at DESC"
@@ -195,13 +223,13 @@ impl Database {
                 id: row.get(0)?,
                 ticket_code: row.get(1)?,
                 template_name: row.get(2)?,
-                background_name: row.get(3)?,
-                filter_used: row.get(4)?,
-                photo_count: row.get(5)?,
-                printed: row.get::<_, i32>(6)? != 0,
-                session_price: row.get(7)?,
-                session_duration: row.get(8)?,
-                actual_duration: row.get(9)?,
+                filter_used: row.get(3)?,
+                photo_count: row.get(4)?,
+                place: row.get(5)?,
+                session_price: row.get(6)?,
+                session_duration: row.get(7)?,
+                actual_duration: row.get(8)?,
+                drive_url: row.get(9)?,
                 created_at: row.get(10)?,
             })
         })?;
@@ -210,13 +238,12 @@ impl Database {
     }
     
     // Get session stats for today
-    pub fn get_today_stats(&self) -> SqliteResult<(i32, i32, i32)> {
+    pub fn get_today_stats(&self) -> SqliteResult<(i32, i32)> {
         let conn = self.conn.lock().unwrap();
         let result = conn.query_row(
             "SELECT 
                 COUNT(*) as total_sessions,
-                SUM(session_price) as total_revenue,
-                SUM(CASE WHEN printed = 1 THEN 1 ELSE 0 END) as printed_count
+                SUM(session_price) as total_revenue
              FROM session_logs 
              WHERE date(created_at) = date('now')",
             [],
@@ -224,28 +251,17 @@ impl Database {
                 Ok((
                     row.get::<_, i32>(0)?,
                     row.get::<_, i32>(1).unwrap_or(0),
-                    row.get::<_, i32>(2).unwrap_or(0),
                 ))
             },
         )?;
         Ok(result)
-    }
-    
-    // Update session (mark as printed)
-    pub fn mark_session_printed(&self, ticket_code: &str) -> SqliteResult<bool> {
-        let conn = self.conn.lock().unwrap();
-        let affected = conn.execute(
-            "UPDATE session_logs SET printed = 1 WHERE ticket_code = ?",
-            [ticket_code],
-        )?;
-        Ok(affected > 0)
     }
 
     // Get ALL sessions (for export)
     pub fn get_all_sessions(&self) -> SqliteResult<Vec<SessionLog>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, ticket_code, template_name, background_name, filter_name, photo_count, printed, session_price, session_duration, actual_duration, created_at 
+            "SELECT id, ticket_code, template_name, filter_name, photo_count, place, session_price, session_duration, actual_duration, drive_url, created_at 
              FROM session_logs 
              ORDER BY created_at ASC"
         )?;
@@ -255,13 +271,13 @@ impl Database {
                 id: row.get(0)?,
                 ticket_code: row.get(1)?,
                 template_name: row.get(2)?,
-                background_name: row.get(3)?,
-                filter_used: row.get(4)?,
-                photo_count: row.get(5)?,
-                printed: row.get::<_, i32>(6)? != 0,
-                session_price: row.get(7)?,
-                session_duration: row.get(8)?,
-                actual_duration: row.get(9)?,
+                filter_used: row.get(3)?,
+                photo_count: row.get(4)?,
+                place: row.get(5)?,
+                session_price: row.get(6)?,
+                session_duration: row.get(7)?,
+                actual_duration: row.get(8)?,
+                drive_url: row.get(9)?,
                 created_at: row.get(10)?,
             })
         })?;

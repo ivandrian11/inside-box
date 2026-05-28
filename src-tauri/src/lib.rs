@@ -914,26 +914,37 @@ fn db_delete_setting(key: String) -> Result<bool, String> {
 fn db_log_session(
     ticket_code: String,
     template_name: Option<String>,
-    background_name: Option<String>,
     filter_name: Option<String>,
     photo_count: i32,
-    printed: bool,
+    place: Option<String>,
     session_price: i32,
     session_duration: i32,
     actual_duration: i32,
+    drive_url: Option<String>,
 ) -> Result<i64, String> {
     get_database()
         .log_session(
             &ticket_code,
             template_name.as_deref(),
-            background_name.as_deref(),
             filter_name.as_deref(),
             photo_count,
-            printed,
+            place.as_deref(),
             session_price,
             session_duration,
             actual_duration,
+            drive_url.as_deref(),
         )
+        .map_err(|e| e.to_string())
+}
+
+// Update a session's Google Drive URL
+#[tauri::command]
+fn db_update_session_drive_url(
+    ticket_code: String,
+    drive_url: String,
+) -> Result<bool, String> {
+    get_database()
+        .update_session_drive_url(&ticket_code, &drive_url)
         .map_err(|e| e.to_string())
 }
 
@@ -947,19 +958,13 @@ fn db_get_today_sessions() -> Result<Vec<SessionLog>, String> {
 
 // Get today's stats
 #[tauri::command]
-fn db_get_today_stats() -> Result<(i32, i32, i32), String> {
+fn db_get_today_stats() -> Result<(i32, i32), String> {
     get_database()
         .get_today_stats()
         .map_err(|e| e.to_string())
 }
 
-// Mark session as printed
-#[tauri::command]
-fn db_mark_session_printed(ticket_code: String) -> Result<bool, String> {
-    get_database()
-        .mark_session_printed(&ticket_code)
-        .map_err(|e| e.to_string())
-}
+
 
 // Get all sessions (export)
 #[tauri::command]
@@ -997,15 +1002,13 @@ pub fn run() {
             db_get_all_settings,
             db_delete_setting,
             db_log_session,
+            db_update_session_drive_url,
             db_get_today_sessions,
             db_get_today_stats,
             create_xendit_qr,
             check_xendit_qr_status,
-            db_mark_session_printed,
             db_get_all_sessions,
             db_clear_all_sessions,
-            db_get_today_stats,
-            db_mark_session_printed,
             // System commands
             exit_app,
             get_abandoned_sessions

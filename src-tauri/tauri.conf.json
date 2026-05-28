@@ -13,7 +13,7 @@
     "windows": [
       {
         "title": "Inside Studio Photobox",
-        "fullscreen": false,
+        "fullscreen": true,
         "resizable": true,
         "decorations": true,
         "alwaysOnTop": false,

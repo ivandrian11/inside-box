@@ -4,16 +4,13 @@
  * Saves photos locally and serves via Cloudflare Tunnel for public access
  * No cloud storage - all photos stored on local device
  */
-
 import { invoke } from '@tauri-apps/api/core'
-import { getPublicGalleryUrl, isTunnelRunning } from './tunnelService'
 
 export interface SessionSaveResult {
   ticketCode: string
   galleryUrl: string
   photoUrls: string[]
   templateUrl?: string
-  isPublic: boolean // true if accessible via tunnel
   driveUrl?: string // Google Drive folder link
 }
 
@@ -53,7 +50,6 @@ const getLocalGalleryUrl = async (ticketCode: string): Promise<string> => {
 
 /**
  * Save all session photos to local storage
- * Returns public URL via tunnel if configured
  */
 export const saveSessionPhotos = async (
   ticketCode: string,
@@ -62,7 +58,6 @@ export const saveSessionPhotos = async (
 ): Promise<SessionSaveResult> => {
   console.log(`\n🚀 Saving photos for ticket: ${ticketCode}`)
   console.log(`📷 Photos: ${photos.filter((p) => p).length}`)
-  console.log(`🌐 Tunnel configured: ${isTunnelRunning()}`)
 
   const photoUrls: string[] = []
   let templateUrl: string | undefined
@@ -98,28 +93,14 @@ export const saveSessionPhotos = async (
   }
 
   // Determine gallery URL
-  let galleryUrl: string
-  let isPublic = false
-
-  // Try to get public URL via tunnel
-  const tunnelGalleryUrl = getPublicGalleryUrl(ticketCode)
-
-  if (tunnelGalleryUrl) {
-    galleryUrl = tunnelGalleryUrl
-    isPublic = true
-    console.log(`\n✅ Public gallery URL: ${galleryUrl}`)
-  } else {
-    // Fallback to local URL
-    galleryUrl = await getLocalGalleryUrl(ticketCode)
-    console.log(`\n📶 Local gallery URL: ${galleryUrl}`)
-    console.log(`⚠️ Only accessible from same WiFi`)
-  }
+  const galleryUrl = await getLocalGalleryUrl(ticketCode)
+  console.log(`\n📶 Local gallery URL: ${galleryUrl}`)
+  console.log(`⚠️ Only accessible from same WiFi`)
 
   return {
     ticketCode,
     galleryUrl,
     photoUrls,
     templateUrl,
-    isPublic,
   }
 }
