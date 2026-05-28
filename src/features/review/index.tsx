@@ -320,7 +320,7 @@ export const StepReview: React.FC = () => {
 
   const handleDownload = () => {
     if (compositeResult) {
-      const filename = `ruarasa-booth-${new Date()
+      const filename = `inside-studio-${new Date()
         .toISOString()
         .slice(0, 10)}.png`
       downloadImage(compositeResult, filename)

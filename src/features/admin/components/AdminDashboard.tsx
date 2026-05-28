@@ -378,11 +378,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
         </div>
       </div>
-
-      {/* System Info - spans 2 columns */}
-      <div className='col-span-2 pt-6 opacity-40 text-studio-textLight text-[0.6rem] font-mono text-center space-y-1 uppercase tracking-widest'>
-        <p>Storage: ~/RuaRasaBooth/photos/</p>
-      </div>
     </div>
   )
 }

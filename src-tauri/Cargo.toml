@@ -1,5 +1,5 @@
 [package]
-name = "ruarasa-booth"
+name = "inside-studio"
 version = "0.1.0"
 description = "Rua Rasa Photo Booth - A Tauri App"
 authors = ["you"]
