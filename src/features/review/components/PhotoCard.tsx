@@ -75,21 +75,9 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
       {/* Persistent Quick Actions (Always Visible, no more hover-only) */}
       <div className='absolute bottom-0 left-0 right-0 z-20 p-2'>
         <div className='flex items-center justify-between gap-1 rounded-xl bg-white/90 p-1.5 backdrop-blur-md border border-studio-border shadow-lg'>
-          {!isTimeout && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                handleRetake(index)
-              }}
-              className='flex h-10 items-center justify-center gap-3 rounded-xl bg-red-600 px-5 font-display font-bold text-white shadow-lg shadow-red-600/20 active:scale-95 transition-all'
-            >
-              <RefreshCcw size={16} strokeWidth={3} />
-              <span className='text-xs uppercase tracking-widest italic'>Retake</span>
-            </button>
-          )}
-
-          <div className='flex items-center gap-1'>
-            {displayImage && (
+          {isTimeout ? (
+            /* Full-width Preview Button when time is up */
+            displayImage && (
               <button
                 onClick={(e) => {
                   e.stopPropagation()
@@ -99,15 +87,44 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
                     label: `Photo ${index + 1}`,
                   })
                 }}
-                className='flex h-10 w-10 items-center justify-center rounded-xl bg-studio-bg text-studio-primary hover:bg-studio-primary hover:text-white shadow-md active:scale-95 transition-all'
-                title='Enlarge'
+                className='flex h-10 w-full items-center justify-center gap-3 rounded-xl bg-studio-primary text-white shadow-lg shadow-studio-primary/20 hover:bg-studio-accent active:scale-95 transition-all'
               >
-                <Eye size={18} strokeWidth={3} />
+                <Eye size={16} strokeWidth={3} />
+                <span className='font-display font-bold text-xs uppercase tracking-widest italic'>Preview</span>
               </button>
-            )}
-            
+            )
+          ) : (
+            /* Show Retake + Small Preview Button */
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleRetake(index)
+                }}
+                className='flex h-10 items-center justify-center gap-3 rounded-xl bg-red-600 px-5 font-display font-bold text-white shadow-lg shadow-red-600/20 active:scale-95 transition-all'
+              >
+                <RefreshCcw size={16} strokeWidth={3} />
+                <span className='text-xs uppercase tracking-widest italic'>Retake</span>
+              </button>
 
-          </div>
+              {displayImage && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setPreviewImage({
+                      isOpen: true,
+                      imageUrl: displayImage,
+                      label: `Photo ${index + 1}`,
+                    })
+                  }}
+                  className='flex h-10 w-10 items-center justify-center rounded-xl bg-studio-bg text-studio-primary hover:bg-studio-primary hover:text-white shadow-md active:scale-95 transition-all'
+                  title='Enlarge'
+                >
+                  <Eye size={18} strokeWidth={3} />
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>

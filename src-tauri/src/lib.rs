@@ -33,12 +33,7 @@ struct WebhookResponse {
 
 
 
-// Photo info for gallery
-#[derive(Debug, Serialize, Clone)]
-struct PhotoInfo {
-    filename: String,
-    url: String,
-}
+
 
 // Xendit QR Request
 #[derive(Debug, Serialize, Clone)]
@@ -555,184 +550,6 @@ fn cleanup_old_photos_cmd() -> Result<String, String> {
     Ok(format!("Berhasil menghapus {} folder foto lama", deleted_count))
 }
 
-
-
-// Generate gallery HTML
-fn generate_gallery_html(ticket_code: &str) -> String {
-    let photos_dir = get_photos_dir();
-    let ticket_dir = photos_dir.join(ticket_code);
-
-    let mut photos = Vec::new();
-
-    if ticket_dir.exists() {
-        if let Ok(entries) = fs::read_dir(&ticket_dir) {
-            for entry in entries.flatten() {
-                let filename = entry.file_name().to_string_lossy().to_string();
-                if filename.ends_with(".png") || filename.ends_with(".jpg") || filename.ends_with(".webp") {
-                    photos.push(PhotoInfo {
-                        filename: filename.clone(),
-                        url: format!("/photos/{}/{}", ticket_code, filename),
-                    });
-                }
-            }
-        }
-    }
-
-    // Sort photos by filename
-    photos.sort_by(|a, b| a.filename.cmp(&b.filename));
-
-    let today = Local::now().format("%d %B %Y").to_string();
-
-    format!(
-        r#"<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inside Studio - {ticket_code}</title>
-    <style>
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1512 0%, #2d2420 100%);
-            min-height: 100vh;
-            color: white;
-            padding: 20px;
-        }}
-        .container {{ max-width: 800px; margin: 0 auto; }}
-        header {{
-            text-align: center;
-            padding: 30px 0;
-            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
-            margin-bottom: 30px;
-        }}
-        h1 {{
-            color: #d4af37;
-            font-size: 2em;
-            margin-bottom: 10px;
-        }}
-        .ticket-code {{
-            background: rgba(212, 175, 55, 0.2);
-            color: #d4af37;
-            padding: 8px 20px;
-            border-radius: 20px;
-            display: inline-block;
-            font-weight: bold;
-            letter-spacing: 3px;
-        }}
-        .disclaimer {{
-            background: rgba(255, 100, 100, 0.1);
-            border: 1px solid rgba(255, 100, 100, 0.3);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 30px;
-            text-align: center;
-        }}
-        .disclaimer strong {{ color: #ff6b6b; }}
-        .gallery {{
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 20px;
-        }}
-        .photo-card {{
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            overflow: hidden;
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            transition: transform 0.3s;
-        }}
-        .photo-card:hover {{ transform: scale(1.02); }}
-        .photo-card img {{
-            width: 100%;
-            height: auto;
-            display: block;
-        }}
-        .photo-card .info {{
-            padding: 15px;
-            text-align: center;
-        }}
-        .download-btn {{
-            display: inline-block;
-            background: linear-gradient(135deg, #d4af37, #c4a030);
-            color: #1a1512;
-            padding: 10px 20px;
-            border-radius: 20px;
-            text-decoration: none;
-            font-weight: bold;
-            margin-top: 10px;
-        }}
-        .download-btn:hover {{ opacity: 0.9; }}
-        .empty {{
-            text-align: center;
-            padding: 50px;
-            color: rgba(255, 255, 255, 0.5);
-        }}
-        footer {{
-            text-align: center;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(212, 175, 55, 0.2);
-            color: rgba(255, 255, 255, 0.5);
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>🎭 Inside Studio</h1>
-            <p style="margin: 10px 0; opacity: 0.7;">{today}</p>
-            <div class="ticket-code">{ticket_code}</div>
-        </header>
-
-        <div class="disclaimer">
-            <strong>⚠️ Perhatian:</strong> Foto akan otomatis dihapus pada pukul 00:00 hari ini.
-            <br>Silakan download sebelum waktu tersebut!
-        </div>
-
-        <div class="gallery">
-            {photos_html}
-        </div>
-
-        {empty_message}
-
-        <footer>
-            <p>Terima kasih telah menggunakan Inside Studio!</p>
-            <p style="margin-top: 5px;">© Rua Rasa Lombok Immersive Edupark</p>
-        </footer>
-    </div>
-</body>
-</html>"#,
-        ticket_code = ticket_code,
-        today = today,
-        photos_html = photos
-            .iter()
-            .map(|p| format!(
-                r#"<div class="photo-card">
-                    <img src="{url}" alt="{filename}" loading="lazy">
-                    <div class="info">
-                        <p>{filename}</p>
-                        <a href="{url}" download="{filename}" class="download-btn">📥 Download</a>
-                    </div>
-                </div>"#,
-                url = p.url,
-                filename = p.filename
-            ))
-            .collect::<Vec<_>>()
-            .join("\n"),
-        empty_message = if photos.is_empty() {
-            r#"<div class="empty"><p>Belum ada foto untuk kode tiket ini.</p></div>"#
-        } else {
-            ""
-        }
-    )
-}
-
-
-
-
-
-
-
 // Start the HTTP server
 fn start_http_server(app_handle: AppHandle) {
     std::thread::spawn(move || {
@@ -837,14 +654,6 @@ fn start_http_server(app_handle: AppHandle) {
                 })
             });
 
-            // GET /gallery/:ticket_code - Gallery page
-            let gallery = warp::path!("gallery" / String)
-                .and(warp::get())
-                .map(|ticket_code: String| {
-                    let html = generate_gallery_html(&ticket_code);
-                    warp::reply::html(html)
-                });
-
             // GET /photos/:ticket_code/:filename - Serve photo files
             let photos = warp::path("photos").and(warp::fs::dir(photos_dir));
 
@@ -857,7 +666,6 @@ fn start_http_server(app_handle: AppHandle) {
             let routes = payment_webhook
                 .or(xendit_webhook)
                 .or(health)
-                .or(gallery)
                 .or(photos)
                 .with(cors);
 

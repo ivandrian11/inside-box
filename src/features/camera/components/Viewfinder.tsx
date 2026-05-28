@@ -46,7 +46,7 @@ export const Viewfinder: React.FC<ViewfinderProps> = ({
             autoPlay
             playsInline
             muted
-            className='absolute inset-0 w-full h-full object-contain transition-transform duration-500'
+            className='absolute inset-0 w-full h-full object-cover transition-transform duration-500'
             style={{
               transform: isPortrait
                 ? `rotate(-90deg) scale(1.7778) scaleX(${
